@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 440" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2e7d32"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c62828"/>
+    </marker>
+  </defs>
+
+  <rect width="750" height="440" fill="#fafafa" rx="10"/>
+
+  <!-- Title -->
+  <text x="375" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1a1a1a">Photonic Device Auto-Design Agent</text>
+
+  <!-- Human (left) -->
+  <rect x="30" y="85" width="130" height="100" rx="8" fill="#e3f2fd" stroke="#90caf9" stroke-width="1.5"/>
+  <text x="95" y="110" text-anchor="middle" font-size="12" font-weight="bold" fill="#1565c0">Human</text>
+  <text x="95" y="130" text-anchor="middle" font-size="10" fill="#555">program.md</text>
+  <text x="95" y="145" text-anchor="middle" font-size="10" fill="#555">design.py</text>
+  <text x="95" y="160" text-anchor="middle" font-size="10" fill="#555">constraints</text>
+
+  <line x1="160" y1="135" x2="194" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Agent loop box -->
+  <rect x="198" y="55" width="340" height="310" rx="10" fill="#fff" stroke="#37474f" stroke-width="2"/>
+  <text x="368" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#37474f">LLM Agent Loop</text>
+
+  <!-- Step 1: Design -->
+  <rect x="230" y="95" width="130" height="44" rx="7" fill="#fff3e0" stroke="#ffa726" stroke-width="1.5"/>
+  <text x="295" y="114" text-anchor="middle" font-size="11" font-weight="bold" fill="#e65100">Design</text>
+  <text x="295" y="129" text-anchor="middle" font-size="9" fill="#888">edit geometry</text>
+
+  <!-- Arrow down -->
+  <line x1="295" y1="139" x2="295" y2="157" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 2: Verify -->
+  <rect x="230" y="160" width="130" height="44" rx="7" fill="#fce4ec" stroke="#ef5350" stroke-width="1.5"/>
+  <text x="295" y="179" text-anchor="middle" font-size="11" font-weight="bold" fill="#c62828">Verify</text>
+  <text x="295" y="194" text-anchor="middle" font-size="9" fill="#888">preview + DRC</text>
+
+  <!-- Arrow down -->
+  <line x1="295" y1="204" x2="295" y2="222" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 3: Simulate -->
+  <rect x="230" y="225" width="130" height="44" rx="7" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
+  <text x="295" y="244" text-anchor="middle" font-size="11" font-weight="bold" fill="#4527a0">Simulate</text>
+  <text x="295" y="259" text-anchor="middle" font-size="9" fill="#888">Tidy3D FDTD</text>
+
+  <!-- Decision diamond -->
+  <polygon points="440,222 495,247 440,272 385,247" fill="#fff" stroke="#37474f" stroke-width="1.5"/>
+  <text x="440" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#37474f">Better?</text>
+
+  <!-- Arrow right to decision (drawn after diamond so arrowhead is visible) -->
+  <line x1="360" y1="247" x2="388" y2="247" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Yes: Keep (down) -->
+  <line x1="440" y1="272" x2="440" y2="305" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="453" y="292" font-size="9.5" font-weight="bold" fill="#2e7d32">yes</text>
+  <rect x="390" y="308" width="100" height="28" rx="6" fill="#e8f5e9" stroke="#66bb6a" stroke-width="1.2"/>
+  <text x="440" y="327" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e7d32">Keep</text>
+
+  <!-- No: up from diamond top, then left to Design -->
+  <path d="M 440,222 L 440,117 L 364,117" fill="none" stroke="#c62828" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <text x="447" y="215" font-size="9.5" font-weight="bold" fill="#c62828">no</text>
+
+  <!-- Loop-back from Keep to Design -->
+  <path d="M 440,336 L 440,348 Q 440,355 433,355 L 215,355 Q 208,355 208,348 L 208,117 Q 208,107 218,107 L 226,107" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="325" y="350" text-anchor="middle" font-size="9" fill="#555" font-style="italic">next experiment</text>
+
+  <!-- Outputs (right) -->
+  <rect x="570" y="85" width="145" height="100" rx="8" fill="#f3e5f5" stroke="#ce93d8" stroke-width="1.5"/>
+  <text x="642" y="110" text-anchor="middle" font-size="12" font-weight="bold" fill="#6a1b9a">Outputs</text>
+  <text x="642" y="130" text-anchor="middle" font-size="10" fill="#555">best_design.py</text>
+  <text x="642" y="145" text-anchor="middle" font-size="10" fill="#555">field plots</text>
+  <text x="642" y="160" text-anchor="middle" font-size="10" fill="#555">experiment journal</text>
+
+  <line x1="538" y1="135" x2="566" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Caption -->
+  <text x="375" y="395" text-anchor="middle" font-size="11" fill="#777">Human writes Markdown. Agent writes Python. Journal provides long-term memory.</text>
+  <text x="375" y="413" text-anchor="middle" font-size="11" fill="#777">Each iteration: design → verify → simulate → keep or discard.</text>
+</svg>

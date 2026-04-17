@@ -1,0 +1,34 @@
+23:12:01 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+Running 20 simulations
+
+xb=5.50_Wb=3.25_p=0.50         T = 0.9015
+xb=5.50_Wb=3.25_p=0.60         T = 0.8503
+xb=5.50_Wb=3.25_p=0.70         T = 0.7987
+xb=5.75_Wb=3.00_p=0.50         T = 0.8060
+xb=5.75_Wb=3.00_p=0.60         T = 0.7821
+xb=5.75_Wb=3.25_p=0.50         T = 0.8941
+xb=5.75_Wb=3.25_p=0.60         T = 0.8408
+xb=5.75_Wb=3.50_p=0.50         T = 0.9127
+xb=5.75_Wb=3.50_p=0.60         T = 0.8918
+xb=5.75_Wb=3.50_p=0.70         T = 0.8245
+xb=5.75_Wb=3.75_p=0.50         T = 0.8351
+xb=5.75_Wb=3.75_p=0.60         T = 0.8997
+xb=5.90_Wb=3.25_p=0.50         T = 0.8866
+xb=5.90_Wb=3.25_p=0.60         T = 0.8345
+xb=5.90_Wb=3.25_p=0.70         T = 0.7971
+xb=5.90_Wb=3.50_p=0.50         T = 0.9195
+xb=5.90_Wb=3.50_p=0.60         T = 0.8878
+xb=5.90_Wb=3.50_p=0.70         T = 0.8235
+xb=5.90_Wb=3.75_p=0.50         T = 0.8597
+xb=5.90_Wb=3.75_p=0.60         T = 0.9070
+
+Top 6:
+  xb=5.90_Wb=3.50_p=0.50: 0.9195
+  xb=5.75_Wb=3.50_p=0.50: 0.9127
+  xb=5.90_Wb=3.75_p=0.60: 0.9070
+  xb=5.50_Wb=3.25_p=0.50: 0.9015
+  xb=5.75_Wb=3.75_p=0.60: 0.8997
+  xb=5.75_Wb=3.25_p=0.50: 0.8941

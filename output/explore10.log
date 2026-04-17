@@ -1,0 +1,33 @@
+23:17:58 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+Running 20 simulations
+
+baseline_pchip         T = 0.8864
+rand_00                T = 0.7918
+rand_01                T = 0.7846
+rand_02                T = 0.8661
+rand_03                T = 0.9038
+rand_04                T = 0.8243
+rand_05                T = 0.8250
+rand_06                T = 0.8895
+rand_07                T = 0.7900
+rand_08                T = 0.8598
+rand_09                T = 0.7766
+rand_10                T = 0.8922
+rand_11                T = 0.7900
+rand_12                T = 0.7698
+rand_13                T = 0.8862
+rand_14                T = 0.8820
+rand_15                T = 0.8076
+rand_16                T = 0.8516
+rand_17                T = 0.8537
+rand_18                T = 0.9061
+
+Top 5:
+  rand_18: 0.9061
+  rand_03: 0.9038
+  rand_10: 0.8922
+  rand_06: 0.8895
+  baseline_pchip: 0.8864

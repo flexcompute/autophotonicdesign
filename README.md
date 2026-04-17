@@ -1,76 +1,65 @@
-# Photonic Device Auto-Design Agent
+# Silicon Photonic Waveguide Taper — Design Showcase
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+> This branch showcases a single run of the auto-design agent on a compact
+> silicon-photonic waveguide taper. **See the [main branch](../../tree/main)
+> for the project introduction, setup, and full description of the framework.**
 
-![schematic](schematic.svg)
+The agent was given a blank slate (a trivial linear-taper baseline) and asked
+to maximize fundamental-mode transmission at 1550 nm over a fixed 6 µm length,
+expanding the mode 10× from a 0.5 µm single-mode waveguide to a 5 µm
+multi-mode waveguide, with a 150 nm minimum feature size. Over 32 experiments
+it iterated through parametric families, switched to gradient-based adjoint
+optimization, and progressively scaled the control-point resolution.
 
-## How It Works
+## Final Result
 
-Each iteration runs through a fixed loop:
+**97.41 % fundamental-mode transmission ≈ −0.114 dB insertion loss** at 1550 nm.
+A 15× reduction in loss vs. the linear-taper baseline (39.3% → 2.6%).
 
-```
-Design → Verify (preview + DRC) → Simulate → Keep or Discard
-```
+### Geometry
 
-A persistent experiment journal (`output/journal.md`) gives the agent
-long-term memory across iterations, so it learns from both successes and
-failures and avoids repeating dead ends. The human's job is to define the
-problem (device type, constraints, target metric) in `program.md`; the
-agent does the engineering.
+![preview](output/preview.png)
 
-## Project Structure
+Layout (x ∈ [0, 6] µm):
 
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `output/` | All generated files (logs, plots, journal, best design) |
+| Section | x-range (µm) | Description |
+|---|---|---|
+| Narrow segment | 0.00 – 5.90 | Monotonic free-form sidewall, 500 nm → 3.84 µm |
+| Step segment | 5.90 – 6.00 | Short aggressive widening, 3.84 µm → 5.00 µm |
 
-## Setup
+The narrow segment is a concave-up profile that starts fast at the input
+(where TE0–TE2 β-separation is large) and slows down approaching mid-taper.
+The 100 nm step segment exploits the near-degeneracy of wide TE0 modes —
+at W = 3.84 µm vs 5 µm the fundamental-mode profiles are nearly identical,
+so an abrupt widening there has ≥ 0.99 projection overlap and costs
+essentially no loss. Both segments are defined by **162 control widths
+optimized jointly via Tidy3D adjoint FDTD** (120 narrow + 40 step + 2
+endpoints).
 
-```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
-```
+### Field Distribution
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+![field](output/field.png)
 
-## Running
+Smooth fundamental-mode expansion across the taper with no visible
+scattering into higher-order even modes or radiation into the cladding.
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+## Optimization Progress
 
-```bash
-claude "Follow the instructions in program.md and start designing!"
-```
+![progress](output/progress.png)
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+The jump from T ≈ 0.64 to 0.92 at experiment 5 is the "sqrt-narrow + wide-end
+step" discovery. Experiments 6–32 are gradient-based refinements via
+Tidy3D autograd, with parameter count scaled 8 → 10 → 16 → 24 → 37 → 66 →
+106 → 161 at warm-started checkpoints.
 
-## Customizing for a Different Device
+Full reasoning and discarded experiments are in
+[output/journal.md](output/journal.md); raw metrics in
+[output/results.tsv](output/results.tsv).
 
-To adapt this framework to a new photonic device:
+## Files of Interest
 
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`)
-   is device-agnostic and does not need to change.
-
-## Credits
-
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+- [design.py](design.py) — final device geometry
+- [output/best_design.py](output/best_design.py) — snapshot of the best design
+- [output/journal.md](output/journal.md) — experiment-by-experiment reasoning
+- [output/results.tsv](output/results.tsv) — raw metrics log
+- [output/preview.png](output/preview.png), [output/field.png](output/field.png), [output/progress.png](output/progress.png)

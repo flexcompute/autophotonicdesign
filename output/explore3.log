@@ -1,0 +1,13 @@
+23:02:23 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+
+
+Profile           T
+p=0.70       0.5251
+p=1.00       0.6072
+p=1.30       0.5737
+p=1.70       0.5379
+p=2.00       0.5224
+p=2.50       0.5006

@@ -1,0 +1,28 @@
+23:06:55 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+Running 15 simulations (budget 20)
+
+bi_xb=4.00_Wb=2.00     T = 0.5911
+bi_xb=4.00_Wb=2.25     T = 0.6237
+bi_xb=4.00_Wb=2.75     T = 0.6574
+bi_xb=4.50_Wb=2.00     T = 0.5999
+bi_xb=4.50_Wb=2.25     T = 0.6370
+bi_xb=4.50_Wb=2.50     T = 0.6588
+bi_xb=4.50_Wb=2.75     T = 0.6710
+bi_xb=5.00_Wb=2.00     T = 0.6033
+bi_xb=5.00_Wb=2.25     T = 0.6460
+bi_xb=5.00_Wb=2.50     T = 0.6761
+bi_xb=5.00_Wb=2.75     T = 0.6908
+tri_1                  T = 0.5063
+tri_2                  T = 0.5162
+tri_3                  T = 0.5273
+tri_4                  T = 0.5776
+
+Top 5:
+  bi_xb=5.00_Wb=2.75: 0.6908
+  bi_xb=5.00_Wb=2.50: 0.6761
+  bi_xb=4.50_Wb=2.75: 0.6710
+  bi_xb=4.50_Wb=2.50: 0.6588
+  bi_xb=4.00_Wb=2.75: 0.6574

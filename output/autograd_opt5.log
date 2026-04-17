@@ -1,0 +1,29 @@
+00:00:02 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+Total params: 38
+
+step 0: T=0.9543  |g|=0.0134  best=0.9543
+
+step 1: T=0.9548  |g|=0.0157  best=0.9548
+
+step 2: T=0.9551  |g|=0.0547  best=0.9551
+
+step 3: T=0.9558  |g|=0.0476  best=0.9558
+
+step 4: T=0.9565  |g|=0.0144  best=0.9565
+
+step 5: T=0.9572  |g|=0.0172  best=0.9572
+
+step 6: T=0.9577  |g|=0.0197  best=0.9577
+
+step 7: T=0.9583  |g|=0.0212  best=0.9583
+
+step 8: T=0.9588  |g|=0.0141  best=0.9588
+
+BEST T = 0.9588
+Narrow widths (31):
+1.16103,1.46947,1.49608,1.54721,1.60432,1.67048,1.74766,1.82764,1.90977,2.00280,2.10565,2.20705,2.29902,2.38018,2.45592,2.52651,2.61321,2.71253,2.81690,2.91078,3.00486,3.10349,3.19490,3.28286,3.37099,3.45497,3.53201,3.60119,3.66024,3.71407,3.76452
+Step widths (7):
+3.93402,4.10404,4.27447,4.44495,4.61530,4.78557,4.91989

@@ -1,0 +1,42 @@
+03:15:07 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+=== Building simulation ===
+  structures : 3
+  monitors   : 2
+  sim size   : (8.0, 7.0, 2.0) μm
+  run time   : 2.00e-12 s
+
+=== Submitting to Tidy3D ===
+03:15:09 EDT Created task 'autodesign' with resource_id                         
+             'fdve-32e526ba-485a-4b87-9cee-9d0b11ed041f' and task_type 'FDTD'.  
+             View task using web UI at                                          
+             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-32e526ba-485
+             a-4b87-9cee-9d0b11ed041f'.                                         
+             Task folder: 'default'.                                            
+↑ simulation.hdf5.gz ━━━━━━━━━━━━━━━━━━━━━━━ 100.0% • 11.5/11.5 kB • ? • 0:00:00
+03:15:11 EDT Estimated FlexCredit cost: 0.038. Minimum cost depends on task     
+             execution details. Use 'web.real_cost(task_id)' to get the billed  
+             FlexCredit cost after a simulation run.                            
+03:15:12 EDT status = queued                                                    
+             To cancel the simulation, use 'web.abort(task_id)' or              
+             'web.delete(task_id)' or abort/delete the task in the web UI.      
+             Terminating the Python script will not stop the job running on the 
+             cloud.                                                             
+03:15:20 EDT status = preprocess                                                
+03:15:24 EDT starting up solver                                                 
+03:15:25 EDT running solver                                                     
+03:15:30 EDT early shutoff detected at 13%, exiting.                            
+solver progress (field decay = 6.80e-06) ━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+03:15:31 EDT status = success                                                   
+             View simulation result at                                          
+             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-32e526ba-485
+             a-4b87-9cee-9d0b11ed041f'.                                         
+↓ simulation_data.hdf5.gz ━━━━━━━━━━━━━ 100.0% • 2.6/2.6 MB • 6.7 MB/s • 0:00:00
+03:15:32 EDT Loading results from output/sim_data/latest.hdf5                   
+
+=== Results ===
+metric: 0.9741373357300294
+wall_time_s: 26.7
+Saved output/field.png

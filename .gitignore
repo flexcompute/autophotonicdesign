@@ -20,3 +20,6 @@ Thumbs.db
 
 # Secrets
 .env
+
+# Simulation data
+*.hdf5

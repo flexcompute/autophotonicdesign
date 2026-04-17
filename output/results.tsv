@@ -1,0 +1,33 @@
+experiment	metric	wall_time_s	status	description
+1	0.60719	7.8	KEPT	linear taper baseline
+2	0.12013	8.0	DISCARDED	power-law p=0.5 (sqrt, fast-start)
+3	0.43948	25.9	DISCARDED	raised-cosine (slow-both-ends)
+4	0.64298	26.8	KEPT	bilinear xb=4.0 Wb=2.5 (slow narrow, fast wide)
+5	0.91971	28.5	KEPT	power-then-line xb=5.9 Wb=3.5 p=0.5 (sqrt + near-step)
+6	0.92518	34.2	KEPT	autograd-optimized 8-point narrow + step (iter 8)
+7	0.94024	28.8	KEPT	autograd-optimized 10-point narrow + step (iter 8 with momentum)
+8	0.94612	23.7	KEPT	autograd-optimized 16-point narrow + step
+9	0.95280	32.3	KEPT	autograd-optimized 20-narrow + 3-step (shapes step region)
+10	0.95884	30.8	KEPT	autograd 30-narrow + 7-step (finer resolution)
+11	0.96046	26.7	KEPT	autograd 50-narrow + 15-step
+12	0.96281	29.3	KEPT	autograd 50+15 Adam refine (9 more iters)
+13	0.96477	47.3	KEPT	autograd 50+15 Adam refine round 2
+14	0.96606	28.3	KEPT	autograd 50+15 Adam refine round 3
+15	0.96725	26.8	KEPT	autograd 50+15 Adam refine round 4
+16	0.96805	26.2	KEPT	autograd 50+15 Adam refine round 5
+17	0.96871	52.0	KEPT	autograd 50+15 Adam refine round 6
+18	0.96913	25.0	KEPT	autograd 50+15 Adam refine round 7
+19	0.97007	31.3	KEPT	autograd scaled to 80+25 params, interpolated warm-start + 9 iter
+20	0.97063	26.3	KEPT	autograd 80+25 refine round 2
+21	0.97118	25.3	KEPT	autograd 80+25 refine round 3
+22	0.97159	28.6	KEPT	autograd 80+25 refine round 4
+23	0.97196	26.1	KEPT	autograd 80+25 refine round 5
+24	0.97224	26.2	KEPT	autograd 80+25 refine round 6
+25	0.97262	27.5	KEPT	autograd scaled to 120+40 params (161 total)
+26	0.97294	30.7	KEPT	autograd 120+40 refine round 2
+27	0.97324	28.1	KEPT	autograd 120+40 refine round 3
+28	0.97346	27.8	KEPT	autograd 120+40 refine round 4
+29	0.97367	26.4	KEPT	autograd 120+40 refine round 5
+30	0.97386	28.4	KEPT	autograd 120+40 refine round 6
+31	0.97402	35.5	KEPT	autograd 120+40 refine round 7
+32	0.97414	26.7	KEPT	autograd 120+40 final round 8 (last experiment)

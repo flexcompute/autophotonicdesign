@@ -1,0 +1,42 @@
+23:41:25 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+
+step 0: T=0.9364  |g|=0.1490  best=0.9364
+
+step 1: T=0.9382  |g|=0.1004  best=0.9382
+
+step 2: T=0.9396  |g|=0.0459  best=0.9396
+
+step 3: T=0.9403  |g|=0.0670  best=0.9403
+
+step 4: T=0.9413  |g|=0.0356  best=0.9413
+
+step 5: T=0.9425  |g|=0.0808  best=0.9425
+
+step 6: T=0.9440  |g|=0.0677  best=0.9440
+
+step 7: T=0.9451  |g|=0.0432  best=0.9451
+
+step 8: T=0.9461  |g|=0.0369  best=0.9461
+
+BEST T = 0.9461
+Widths (17):
+  0: 1.46478
+  1: 1.52436
+  2: 1.65600
+  3: 1.80738
+  4: 1.96048
+  5: 2.12116
+  6: 2.29960
+  7: 2.46601
+  8: 2.60549
+  9: 2.75994
+  10: 2.91740
+  11: 3.05966
+  12: 3.19627
+  13: 3.32550
+  14: 3.44285
+  15: 3.54609
+  16: 3.63872

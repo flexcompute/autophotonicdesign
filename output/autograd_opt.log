@@ -1,0 +1,56 @@
+23:21:23 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+Initial widths:
+[1.50843897 1.91934064 2.23554215 2.50241984 2.73769165 2.95047804
+ 3.14620886 3.32842712 3.5       ]
+
+
+step 0: T = 0.8910  |grad| = 0.3025
+  widths = [1.50843897 1.91934064 2.23554215 2.50241984 2.73769165 2.95047804
+ 3.14620886 3.32842712 3.5       ]
+
+
+step 1: T = 0.9053  |grad| = 0.1831
+  widths = [1.47696942 1.8785938  2.19206749 2.45833189 2.69297676 2.90561948
+ 3.10131369 3.28358739 3.45509858]
+
+
+step 2: T = 0.9130  |grad| = 0.0701
+  widths = [1.44608673 1.83699324 2.14712566 2.41355292 2.64785744 2.86085537
+ 3.05684296 3.23942289 3.41090455]
+
+
+step 3: T = 0.9159  |grad| = 0.0560
+  widths = [1.42438578 1.79938673 2.10354396 2.37392289 2.60959998 2.82552617
+ 3.02344542 3.20752021 3.37908524]
+
+
+step 4: T = 0.9185  |grad| = 0.0592
+  widths = [1.45484429 1.82451673 2.12467102 2.40352673 2.64356704 2.86507829
+ 3.06663465 3.25318782 3.42497578]
+
+
+step 5: T = 0.9206  |grad| = 0.0617
+  widths = [1.43490538 1.7893914  2.08294205 2.36534793 2.60617685 2.83080103
+ 3.03456281 3.22280569 3.39467667]
+
+
+step 6: T = 0.9223  |grad| = 0.0751
+  widths = [1.46557057 1.81891897 2.11040076 2.39925329 2.64307708 2.87191891
+ 3.07846483 3.26858061 3.44059935]
+
+
+step 7: T = 0.9228  |grad| = 0.0867
+  widths = [1.43490535 1.7739953  2.05917289 2.3499774  2.59363319 2.82462403
+ 3.03280532 3.22428198 3.39632002]
+
+
+step 8: T = 0.9253  |grad| = 0.0562
+  widths = [1.46557079 1.80636997 2.09087888 2.38575128 2.6312814  2.86517591
+ 3.07525968 3.26801025 3.44017523]
+Traceback (most recent call last):
+  File "/Users/tom-flexcompute/Desktop/autophotonicdesign/output/autograd_opt.py", line 116, in <module>
+    final_T = float(np.abs(final_data["mode"].amps.sel(mode_index=0, direction="+").values)**2)
+TypeError: only 0-dimensional arrays can be converted to Python scalars

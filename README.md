@@ -1,76 +1,54 @@
-# Photonic Device Auto-Design Agent
+# 1x2 Silicon Photonic Splitter — Design Showcase
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+> This branch showcases a single run of the auto-design agent on a compact
+> silicon-photonic 1×2 power splitter. **See the [main branch](../../tree/main)
+> for the project introduction, setup, and full description of the framework.**
 
-![schematic](schematic.svg)
+The agent was given a blank slate (a trivial linear-Y baseline) and asked to
+maximize total transmission at 1550 nm within a 4 × 10 µm footprint, with a
+150 nm minimum feature size. Over 50 experiments it iterated on geometry
+families, parameter choices, and grid resolution, ending at a compact MMI
+splitter with an input mode-matching taper and cosine S-bend access arms.
 
-## How It Works
+## Final Result
 
-Each iteration runs through a fixed loop:
+**99.66 % total transmission ≈ −0.015 dB insertion loss** at 1550 nm.
 
-```
-Design → Verify (preview + DRC) → Simulate → Keep or Discard
-```
+### Geometry
 
-A persistent experiment journal (`output/journal.md`) gives the agent
-long-term memory across iterations, so it learns from both successes and
-failures and avoids repeating dead ends. The human's job is to define the
-problem (device type, constraints, target metric) in `program.md`; the
-agent does the engineering.
+![preview](output/preview.png)
 
-## Project Structure
+Layout (x ∈ [0, 10] µm):
 
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `output/` | All generated files (logs, plots, journal, best design) |
+| Section | x-range (µm) | Description |
+|---|---|---|
+| Input taper | 0.00 – 1.50 | Linear taper, 500 nm → 950 nm |
+| MMI body | 1.50 – 5.15 | Rectangular, 2.10 µm wide × 3.65 µm long |
+| Access arms | 5.15 – 10.00 | Cosine-S-bent tapered polygons |
 
-## Setup
+The arm polygons are shaped so the outer edge is flush with the MMI top
+(no sub-150 nm DRC corner pockets) while the inner edge opens a 200 nm
+center trench. Both edges are cosine-eased for adiabatic transition.
 
-```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
-```
+### Field Distribution
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+![field](output/field.png)
 
-## Running
+Clean two-lobe self-imaging inside the MMI, minimal scattering, and
+low-ripple propagation down the two output waveguides.
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+## Optimization Progress
 
-```bash
-claude "Follow the instructions in program.md and start designing!"
-```
+![progress](output/progress.png)
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+Full reasoning and discarded experiments are in
+[output/journal.md](output/journal.md); raw metrics in
+[output/results.tsv](output/results.tsv).
 
-## Customizing for a Different Device
+## Files of Interest
 
-To adapt this framework to a new photonic device:
-
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`)
-   is device-agnostic and does not need to change.
-
-## Credits
-
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+- [design.py](design.py) — final device geometry
+- [output/best_design.py](output/best_design.py) — snapshot of the best design
+- [output/journal.md](output/journal.md) — experiment-by-experiment reasoning
+- [output/results.tsv](output/results.tsv) — raw metrics log
+- [output/preview.png](output/preview.png), [output/field.png](output/field.png), [output/progress.png](output/progress.png)

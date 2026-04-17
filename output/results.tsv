@@ -1,0 +1,51 @@
+experiment	metric	wall_time_s	status	description
+1	0.8086	8.7	KEPT	Baseline: linear dual-taper PolySlab, center width 1.2um
+2	0.8239	27.2	KEPT	Parabolic taper profile, center width 1.2um
+3	0.8115	43.2	DISCARDED	Parabolic, center width 1.8um (too wide)
+4	0.7813	34.6	DISCARDED	Parabolic, center width 0.9um (too narrow)
+5	0.8704	30.6	KEPT	Parabolic, center width 1.4um
+6	0.8658	34.4	DISCARDED	Parabolic, center width 1.5um (slightly worse)
+7	0.9305	36.6	KEPT	MMI: parabolic taper + flat center, w=1.4, mmi_half=1.0
+8	0.9319	32.4	KEPT	MMI: w=1.4, mmi_half=1.5 (longer flat section)
+9	0.7016	29.2	DISCARDED	MMI: w=1.8, mmi_half=1.5 (too wide)
+10	0.9152	32.6	DISCARDED	MMI: w=1.2, mmi_half=1.5 (narrower)
+11	0.8438	27.9	DISCARDED	Cosine taper (zero slope both ends)
+12	0.8554	35.5	DISCARDED	Lens-bump + circular hub, w_bump=1.4 w_center=1.0 r_hub=0.9
+13	0.8339	34.6	DISCARDED	MMI + square corner fillers (0.4um) at concave corners
+14	0.8764	32.9	DISCARDED	MMI: w=1.4, mmi_half=2.0 (too long)
+15	0.9365	33.9	KEPT	MMI: w=1.4, mmi_half=1.25 (new best)
+16	0.8819	29.7	DISCARDED	MMI: w=1.5, mmi_half=1.25 (too wide)
+17	0.9545	32.0	KEPT	MMI: w=1.35, mmi_half=1.25 (new best)
+18	0.9587	62.2	KEPT	MMI: w=1.3, mmi_half=1.25 (new best)
+19	0.9445	32.8	DISCARDED	MMI: w=1.25, mmi_half=1.25 (too narrow)
+20	0.9476	28.3	DISCARDED	MMI: w=1.3, mmi_half=1.1
+21	0.9673	28.2	KEPT	MMI: w=1.3, mmi_half=1.4 (new best, -0.14 dB)
+22	0.9740	33.6	KEPT	MMI: w=1.3, mmi_half=1.6 (new best, -0.11 dB)
+23	0.9734	32.8	DISCARDED	MMI: w=1.3, mmi_half=1.8 (marginal worse)
+24	0.9748	54.6	KEPT	MMI: w=1.3, mmi_half=1.7 (new best, -0.11 dB)
+25	0.9440	27.3	DISCARDED	Linear taper profile
+26	0.9603	31.3	DISCARDED	Cubic taper profile (t^3)
+27	0.9158	32.4	DISCARDED	Exponential taper profile
+28	0.9697	32.9	DISCARDED	t^1.5 taper profile
+29	-	-	DRC_FAIL	Center-waist profile: w_waist=1.2 w_mmi=1.3 (concave gap violation)
+30	0.9700	35.4	DISCARDED	Center-bulge profile w_bulge=1.4 w_mmi=1.3
+31	0.9724	32.9	DISCARDED	w=1.28, mmi_half=1.7
+32	0.9723	33.8	DISCARDED	w=1.32, mmi_half=1.7
+33	0.9064	35.1	DISCARDED	w=1.4, mmi_half=1.8
+34	0.9743	31.0	DISCARDED	w=1.3, mmi_half=1.75 (~same as best)
+35	0.9748	61.8	DISCARDED	n_taper=100 (no change)
+36	0.9891	36.5	KEPT	ASYMMETRIC: H(w=1.3,mh=1.7) V(w=0.8,mh=1.7) — new best, -0.048 dB
+37	0.9876	33.0	DISCARDED	Asym H(1.3,1.7) V(0.6,1.7)
+38	0.9869	33.8	DISCARDED	Asym H(1.3,1.7) V(1.0,1.7)
+39	0.9882	31.1	DISCARDED	Asym H(1.3,1.7) V(0.7,1.7)
+40	0.9881	28.2	DISCARDED	Asym H(1.3,1.7) V(0.9,1.7)
+41	0.9889	32.9	DISCARDED	Asym H(1.3,1.7) V(0.8,0.0) (pure parabolic bump V)
+42	0.9868	38.9	DISCARDED	Asym H(1.3,1.7) V=0.5 straight (no widening)
+43	0.9537	32.8	DISCARDED	Asym H(1.35,1.7) V(0.8,1.7)
+44	0.9782	31.2	DISCARDED	Asym H(1.25,1.7) V(0.8,1.7)
+45	0.9892	34.7	KEPT	Asym H(1.3,1.5) V(0.8,1.7) (~tie)
+46	0.9836	32.9	DISCARDED	Asym H(1.3,1.9) V(0.8,1.7)
+47	0.9858	31.3	DISCARDED	Asym H(1.3,1.3) V(0.8,1.7)
+48	0.9896	31.5	KEPT	Asym H(1.3,1.6) V(0.8,1.7) — FINAL BEST, -0.045 dB
+49	0.9896	32.9	(tie)	Asym H(1.3,1.6) V(0.8,1.0) (same metric)
+50	0.9892	27.9	DISCARDED	Asym H(1.3,1.6) V(0.75,1.7)

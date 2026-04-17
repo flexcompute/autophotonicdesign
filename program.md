@@ -2,13 +2,16 @@
 
 You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop — never stopping, never asking the human for input.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Today, you are tasked to design a silicon photonic low-loss waveguide taper that expands the mode from a 0.5 µm input waveguide to a 5 µm output waveguide over a fixed 6 µm length, while maximizing fundamental-mode transmission.
 ---
 
 ## 1. Platform Reference
 
 - **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
+- **Waveguide thickness:** 220 nm SOI
+- **Input waveguide:** 500 nm wide, single-mode TE at 1550 nm
+- **Output waveguide:** 5 µm wide, multi-mode
+- **Taper length:** 6 µm (fixed)
 - **Operating wavelength:** 1550 nm (telecom C-band)
 
 ---
@@ -35,13 +38,14 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ### Device geometry
 
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
-- **Y-symmetry:** The device must be symmetric about y = 0.
-- **Minimum feature size:** 150 nm for all gaps, widths, and radii.
+- **Taper footprint:** fixed at 6 µm long (x) × 5 µm wide (y) at the output; must fit fully between x = 0 and x = 6.
+- **Endpoint widths:** the taper must meet the 0.5 µm input waveguide at x = 0 and the 5 µm output waveguide at x = 6 with no gap or overlap discontinuity.
+- **Y-symmetry:** The taper must be symmetric about y = 0.
+- **Minimum feature size:** 150 nm for all widths and gaps.
 
 ### Code rules
 
-- Only modify `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`).
+- Only modify the taper geometry inside `create_simulation()` in `design.py`. Do not change `evaluate()`, the input/output waveguides, source, monitors, `sim_box`, or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH_IN`, `WG_WIDTH_OUT`, `WG_HEIGHT`, `TAPER_LENGTH`, `BUFFER`, `Si`, `SiO2`).
 - `design.py` must export `create_simulation()` and `evaluate(sim_data)`. The `evaluate` function may return a dict or a single scalar (higher = better).
 - No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
@@ -140,10 +144,10 @@ Before editing `design.py`, you may write and run Python scripts to inform your 
 
 When inspecting `output/preview.png`, verify:
 
-1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
+1. **Structures** — All waveguides and the taper are visible. No missing pieces.
+2. **Connectivity** — Input waveguide connects to taper at x = 0; taper connects to output waveguide at x = 6. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
+3. **Source** — Inside the input waveguide, before the taper, not in PML.
+4. **Monitors** — Output mode monitor after the taper, inside the 5 µm output waveguide, not in PML.
 5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ 0.5 µm gap.
 6. **Domain size** — Large enough for the full device with buffer.
 
@@ -169,8 +173,8 @@ Entry template:
 ## Experiment N — <short title>
 
 - **Hypothesis:** What you changed and why.
-- **Key parameters:** Values modified (e.g., taper_length=5.0, mmi_width=3.0).
-- **Result:** metric = X.XXXX (total transmission, higher is better)
+- **Key parameters:** Values modified (e.g., taper_profile="quadratic", num_segments=8).
+- **Result:** metric = X.XXXX (fundamental-mode transmission, higher is better)
 - **vs. previous best:** +/- X.XXXX (improved / worse / equal)
 - **Kept or discarded:** KEPT / DISCARDED
 - **Lesson learned:** One specific sentence.

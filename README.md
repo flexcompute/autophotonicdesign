@@ -15,8 +15,6 @@ the two. Over 20 more experiments (51–70) the agent tuned the new
 and — critically — the ellipse eccentricity) while re-checking that
 the 2D-optimized knobs still held up under 3D physics.
 
-All runs are full 3D FDTD on Tidy3D at `min_steps_per_wvl = 20`.
-
 ## Final Result
 
 **51.42 % peak coupling ≈ −2.89 dB insertion loss** at 1550 nm into

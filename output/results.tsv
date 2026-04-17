@@ -49,3 +49,13 @@ experiment	metric	wall_time_s	status	description
 48	0.9896	31.5	KEPT	Asym H(1.3,1.6) V(0.8,1.7) — FINAL BEST, -0.045 dB
 49	0.9896	32.9	(tie)	Asym H(1.3,1.6) V(0.8,1.0) (same metric)
 50	0.9892	27.9	DISCARDED	Asym H(1.3,1.6) V(0.75,1.7)
+51	0.9745	31.2	DISCARDED	Sym w=1.30, mmi_half=1.65
+52	0.9741	31.3	DISCARDED	Sym w=1.31, mmi_half=1.70
+53	0.9062	28.1	DISCARDED	Sym + 4 square corner fillers (0.3um)
+54	0.3022	31.3	DISCARDED	Sym + central SiO2 hole (r=0.2um, huge reflection)
+55	0.9747	32.6	DISCARDED	Sym + central Si hub (r=0.8, inside arms, no effect)
+56	0.9663	31.3	DISCARDED	Sym + central Si hub (r=1.0, reaches corners)
+57	0.9743	31.3	DISCARDED	Sym w=1.29, mmi_half=1.70
+58	0.9357	38.3	DISCARDED	Sym + smoothstep (3t²-2t³) taper
+59	0.8658	35.4	DISCARDED	Sym pure parabolic no flat (mmi_half=0, w=1.5)
+60	0.9747	29.5	(tie)	Sym w=1.30, mmi_half=1.68 (same as best)

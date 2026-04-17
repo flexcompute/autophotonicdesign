@@ -102,33 +102,27 @@ def create_simulation() -> td.Simulation:
     # --- Structures ---
     structures = [west_wg, east_wg, south_wg, north_wg]
 
-    # Asymmetric crossing: H arm is the MMI (propagation direction for metric).
-    # V arm is narrower, minimizing its blockage of the H-arm mode.
-    # Symmetry requirement x↔-x, y↔-y allows H and V arms to differ.
-    h_w_mmi = 1.3
-    h_mmi_half = 1.6
-    v_w_mmi = 0.8
-    v_mmi_half = 1.7
+    # 4-fold symmetric MMI crossing: both arms are identical parabolic-taper
+    # MMIs with a flat central multimode section. Preserves x↔-x, y↔-y, AND
+    # the diagonal x↔y symmetry so the crossing is reciprocal across all 4
+    # ports.
+    w_mmi = 1.3         # MMI width (both arms)
+    mmi_half = 1.7      # flat region half-length (both arms)
     n_taper = 60
 
-    def make_profile(w_mmi, mmi_h):
+    def profile(s):
         w_ctr = w_mmi / 2
         w_edge = WG_WIDTH / 2
-        mhn = mmi_h / DESIGN_HALF
-        def f(s):
-            if abs(s) <= mhn:
-                return w_ctr
-            t = (abs(s) - mhn) / (1 - mhn)
-            return w_ctr + (w_edge - w_ctr) * t * t
-        return f
+        mhn = mmi_half / DESIGN_HALF
+        if abs(s) <= mhn:
+            return w_ctr
+        t = (abs(s) - mhn) / (1 - mhn)
+        return w_ctr + (w_edge - w_ctr) * t * t
 
-    h_profile = make_profile(h_w_mmi, h_mmi_half)
-    v_profile = make_profile(v_w_mmi, v_mmi_half)
-
-    # Horizontal arm (west <-> east) — the MMI
+    # Horizontal arm (west <-> east)
     xs = np.linspace(-DESIGN_HALF, DESIGN_HALF, n_taper)
-    top = [(x, h_profile(x / DESIGN_HALF)) for x in xs]
-    bot = [(x, -h_profile(x / DESIGN_HALF)) for x in xs[::-1]]
+    top = [(x, profile(x / DESIGN_HALF)) for x in xs]
+    bot = [(x, -profile(x / DESIGN_HALF)) for x in xs[::-1]]
     structures.append(
         td.Structure(
             geometry=td.PolySlab(
@@ -140,10 +134,10 @@ def create_simulation() -> td.Simulation:
         )
     )
 
-    # Vertical arm (south <-> north) — narrower
+    # Vertical arm (south <-> north) — same profile as H arm for 4-fold symmetry
     ys = np.linspace(-DESIGN_HALF, DESIGN_HALF, n_taper)
-    right = [(v_profile(y / DESIGN_HALF), y) for y in ys]
-    left = [(-v_profile(y / DESIGN_HALF), y) for y in ys[::-1]]
+    right = [(profile(y / DESIGN_HALF), y) for y in ys]
+    left = [(-profile(y / DESIGN_HALF), y) for y in ys[::-1]]
     structures.append(
         td.Structure(
             geometry=td.PolySlab(

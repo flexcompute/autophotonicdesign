@@ -194,6 +194,35 @@ Plan: Start with baseline tapered crossing (already in design.py), sweep taper w
 - v_w=0.75: 0.9892 (slightly worse).
 - **Lesson:** Plateau reached with this parameterization.
 
+# Phase 5: Back to 4-fold symmetric (exp 51-60)
+
+User requirement: the crossing must be 4-fold symmetric (H arm = V arm), as a
+proper reciprocal 4-port crossing. Reverted to symmetric best (exp 24: w=1.3,
+mmi_half=1.7, metric 0.9747). The next 10 experiments attempt to improve
+this ceiling while keeping H = V.
+
+## Experiments 51-52 — Fine parameter sweep near sym optimum
+- Exp 51: w=1.30, mmi_half=1.65 → 0.9745. Plateau.
+- Exp 52: w=1.31, mmi_half=1.70 → 0.9741. Plateau.
+
+## Experiments 53-56 — 4-fold-symmetric central-feature additions
+- Exp 53: 4 square corner fillers (0.3 µm) at concave corners → 0.9062. DISCARDED.
+- Exp 54: Central SiO2 hole (r=0.2 µm) → 0.3022. Huge reflection — too much RI contrast.
+- Exp 55: Central Si hub (r=0.8 µm, inside existing arms) → 0.9747. No effect (hub fits inside the plus-sign silicon).
+- Exp 56: Central Si hub (r=1.0 µm, reaches concave corners) → 0.9663. Worse.
+- **Lesson:** The concave corners of the plus-sign are not lossy scatter sources — the MMI self-imaging depends on the bare plus-sign shape. Adding/removing material at the center hurts.
+
+## Experiments 57-60 — More parameter and profile attempts
+- Exp 57: w=1.29, mmi_half=1.70 → 0.9743. Plateau.
+- Exp 58: Smoothstep taper (3t²-2t³, zero slope both ends) → 0.9357. Consistent with earlier cosine result — too gradual at WG junction.
+- Exp 59: Pure parabolic with no flat center (mmi_half=0, w=1.5) → 0.8658. The flat multimode section is essential.
+- Exp 60: w=1.30, mmi_half=1.68 → 0.9747. Ties best.
+
+## Final symmetric best
+- **Configuration:** w=1.30 µm, mmi_half=1.70 µm, parabolic (t²) taper, 4-fold symmetric.
+- **Metric:** 0.9747 (≈ -0.111 dB insertion loss).
+- **Lesson:** For the symmetric topology we've converged on a broad plateau ~0.974-0.975. Further gains likely require a fundamentally different topology (e.g., inverse-designed density field, subwavelength grating, or dual-stage MMI) rather than parameter tuning within the parabolic-taper + flat-MMI family.
+
 ---
 
 # Final Summary

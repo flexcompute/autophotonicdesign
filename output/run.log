@@ -1,4 +1,4 @@
-21:38:09 EDT WARNING: Using canonical configuration directory at                
+22:29:37 EDT WARNING: Using canonical configuration directory at                
              '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
              '~/.tidy3d', which will be ignored. Remove it manually or run      
              'tidy3d config migrate --delete-legacy' to clean up.               
@@ -9,12 +9,12 @@
   run time   : 2.00e-12 s
 
 === Submitting to Tidy3D ===
-21:38:11 EDT Loading simulation from local cache. View cached task using web UI 
+22:29:39 EDT Loading simulation from local cache. View cached task using web UI 
              at                                                                 
-             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-b3ded50d-49f
-             d-4d49-abad-46b0ec6db45a'.                                         
+             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-4ac88b93-201
+             a-42b9-9cf3-6edfe10a917a'.                                         
 
 === Results ===
-metric: 0.98962940083638
-wall_time_s: 2.8
+metric: 0.9747477042373418
+wall_time_s: 2.9
 Saved output/field.png

@@ -26,6 +26,15 @@ failures and avoids repeating dead ends. The human's job is to define the
 problem (device type, constraints, target metric) in `program.md`; the
 agent does the engineering.
 
+## Example Designs
+
+See a few examples of what the AI photonic designer has designed:
+
+- [`1x2splitter`](../../tree/1x2splitter)
+- [`taper`](../../tree/taper)
+- [`crossing`](../../tree/crossing)
+
+
 ## Project Structure
 
 | File | Role |

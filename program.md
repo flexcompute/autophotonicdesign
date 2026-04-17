@@ -2,14 +2,14 @@
 
 You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop — never stopping, never asking the human for input.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Today, you are tasked to design a broadband silicon photonic low-loss waveguide crossing.
 ---
 
 ## 1. Platform Reference
 
 - **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
 - **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
-- **Operating wavelength:** 1550 nm (telecom C-band)
+- **Operating wavelength:** 1500-1600 nm
 
 ---
 
@@ -35,13 +35,13 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ### Device geometry
 
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
-- **Y-symmetry:** The device must be symmetric about y = 0.
+- **Design region:** 6 µm × 6 µm, excluding the four I/O waveguides (north, south, east, west).
+- **Symmetry:** The device should preserve the symmetry of the crossing (x ↔ -x and y ↔ -y).
 - **Minimum feature size:** 150 nm for all gaps, widths, and radii.
 
 ### Code rules
 
-- Only modify `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`).
+- Only modify `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `DESIGN_HALF`, `WAVELENGTHS`, `FREQUENCIES`, `Si`, `SiO2`).
 - `design.py` must export `create_simulation()` and `evaluate(sim_data)`. The `evaluate` function may return a dict or a single scalar (higher = better).
 - No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
@@ -140,10 +140,10 @@ Before editing `design.py`, you may write and run Python scripts to inform your 
 
 When inspecting `output/preview.png`, verify:
 
-1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
+1. **Structures** — All four waveguides (N/S/E/W) and the crossing features are visible. No missing pieces.
+2. **Connectivity** — Each of the four waveguides connects cleanly into the central crossing. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
+3. **Source** — Inside the west waveguide, before the crossing, not in PML.
+4. **Monitors** — Output mode monitor in the east waveguide after the crossing, not in PML, not overlapping another waveguide.
 5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ 0.5 µm gap.
 6. **Domain size** — Large enough for the full device with buffer.
 
@@ -170,7 +170,7 @@ Entry template:
 
 - **Hypothesis:** What you changed and why.
 - **Key parameters:** Values modified (e.g., taper_length=5.0, mmi_width=3.0).
-- **Result:** metric = X.XXXX (total transmission, higher is better)
+- **Result:** metric = X.XXXX (mean west→east mode transmission across 1.5–1.6 µm, higher is better)
 - **vs. previous best:** +/- X.XXXX (improved / worse / equal)
 - **Kept or discarded:** KEPT / DISCARDED
 - **Lesson learned:** One specific sentence.

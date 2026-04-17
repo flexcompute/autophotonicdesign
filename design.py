@@ -2,9 +2,9 @@
 design.py - Photonic device design file.
 THE AGENT MODIFIES THIS FILE.
 
-Current device: 1x2 Power Splitter
+Current device: Waveguide Crossing
 Platform: Silicon photonics, 220nm SOI, 1550nm
-Metric: total transmission power - higher is better
+Metric: mode transmission power west->east - higher is better
 """
 
 import numpy as np
@@ -18,7 +18,11 @@ WAVELENGTH = 1.55  # um - C-band center
 FREQUENCY = td.C_0 / WAVELENGTH
 WG_WIDTH = 0.5  # um - single-mode at 1550nm
 WG_HEIGHT = 0.22  # um - standard SOI thickness
-OUTPUT_SEPARATION = 2.0  # um - center-to-center of output waveguides
+DESIGN_HALF = 3.0  # um - half-extent of 6um x 6um design region
+
+# Broadband sweep: 1.5 um -> 1.6 um, 11 points
+WAVELENGTHS = np.linspace(1.5, 1.6, 11)
+FREQUENCIES = td.C_0 / WAVELENGTHS
 
 # ============================================================
 # Materials
@@ -26,37 +30,96 @@ OUTPUT_SEPARATION = 2.0  # um - center-to-center of output waveguides
 Si = td.Medium.from_nk(n=3.47, k=0, freq=FREQUENCY)
 SiO2 = td.Medium.from_nk(n=1.44, k=0, freq=FREQUENCY)
 
+# ============================================================
+# Feed Waveguides (defined outside create_simulation)
+# ============================================================
+west_wg = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(-1e3, -WG_WIDTH / 2, -WG_HEIGHT / 2),
+        rmax=(-DESIGN_HALF, WG_WIDTH / 2, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+east_wg = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(DESIGN_HALF, -WG_WIDTH / 2, -WG_HEIGHT / 2),
+        rmax=(1e3, WG_WIDTH / 2, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+south_wg = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(-WG_WIDTH / 2, -1e3, -WG_HEIGHT / 2),
+        rmax=(WG_WIDTH / 2, -DESIGN_HALF, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+north_wg = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(-WG_WIDTH / 2, DESIGN_HALF, -WG_HEIGHT / 2),
+        rmax=(WG_WIDTH / 2, 1e3, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+
+# ============================================================
+# Source and Monitors (defined outside create_simulation)
+# ============================================================
+BUFFER = 2.0  # um - spacing between design region and source/monitor planes
+MODE_PLANE_SIZE = (0, WG_WIDTH * 4, WG_HEIGHT * 6)
+
+# Mode source in west waveguide, launching toward +x
+source = td.ModeSource(
+    center=(-DESIGN_HALF - BUFFER / 2, 0, 0),
+    size=MODE_PLANE_SIZE,
+    source_time=td.GaussianPulse(freq0=FREQUENCY, fwidth=FREQUENCY / 20),
+    direction="+",
+    mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
+    mode_index=0,
+    name="input_mode",
+)
+
+# Mode monitor in east waveguide (broadband)
+mode_monitor = td.ModeMonitor(
+    center=(DESIGN_HALF + BUFFER / 2, 0, 0),
+    size=MODE_PLANE_SIZE,
+    freqs=list(FREQUENCIES),
+    mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
+    name="mode",
+)
+
+# Field profile for visualization
+field_monitor = td.FieldMonitor(
+    size=(td.inf, td.inf, 0),
+    freqs=[FREQUENCY],
+    name="field_xy",
+)
+
 
 def create_simulation() -> td.Simulation:
-    """Build and return a Tidy3D simulation of the 1x2 splitter."""
+    """Build and return a Tidy3D simulation of the waveguide crossing."""
 
     # --- Structures ---
-    structures = []
+    structures = [west_wg, east_wg, south_wg, north_wg]
 
-    # Input waveguide
-    structures.append(
-        td.Structure(
-            geometry=td.Box.from_bounds(
-                rmin=(-1e3, -WG_WIDTH / 2, -WG_HEIGHT / 2),
-                rmax=(0, WG_WIDTH / 2, WG_HEIGHT / 2),
-            ),
-            medium=Si,
-        )
-    )
+    # Tapered crossing: two orthogonal tapered arms filling the 6x6 design region.
+    # Each arm widens from WG_WIDTH at the design edge to a wider center width
+    # to improve mode matching and suppress crosstalk at the junction.
+    taper_center_width = 1.2  # um
 
-    taper_length = 10
-
-    # Splitting junction — linear taper from input width to full output span
-    junction_vertices = [
-        (0, -WG_WIDTH / 2),
-        (0, WG_WIDTH / 2),
-        (taper_length, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2),
-        (taper_length, -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2),
+    # Horizontal tapered arm (west <-> east)
+    h_vertices = [
+        (-DESIGN_HALF, -WG_WIDTH / 2),
+        (0, -taper_center_width / 2),
+        (DESIGN_HALF, -WG_WIDTH / 2),
+        (DESIGN_HALF, WG_WIDTH / 2),
+        (0, taper_center_width / 2),
+        (-DESIGN_HALF, WG_WIDTH / 2),
     ]
     structures.append(
         td.Structure(
             geometry=td.PolySlab(
-                vertices=junction_vertices,
+                vertices=h_vertices,
                 slab_bounds=(-WG_HEIGHT / 2, WG_HEIGHT / 2),
                 axis=2,
             ),
@@ -64,68 +127,29 @@ def create_simulation() -> td.Simulation:
         )
     )
 
-    # Output waveguide 1 (upper, +y)
-    structures.append(
-        td.Structure(
-            geometry=td.Box.from_bounds(
-                rmin=(
-                    taper_length,
-                    OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
-                    -WG_HEIGHT / 2,
-                ),
-                rmax=(1e3, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
-            ),
-            medium=Si,
-        )
-    )
-
-    # Output waveguide 2 (lower, -y)
-    structures.append(
-        td.Structure(
-            geometry=td.Box.from_bounds(
-                rmin=(
-                    taper_length,
-                    -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
-                    -WG_HEIGHT / 2,
-                ),
-                rmax=(1e3, -OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
-            ),
-            medium=Si,
-        )
-    )
-
-    buffer = 2
-    # --- Source ---
-    source = td.ModeSource(
-        center=(-buffer / 2, 0, 0),
-        size=(0, WG_WIDTH * 4, WG_HEIGHT * 6),
-        source_time=td.GaussianPulse(freq0=FREQUENCY, fwidth=FREQUENCY / 20),
-        direction="+",
-        mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
-        mode_index=0,
-        name="input_mode",
-    )
-
-    # --- Monitors ---
-    monitors = [
-        td.ModeMonitor(
-            center=(taper_length + buffer / 2, OUTPUT_SEPARATION / 2, 0),
-            size=source.size,
-            freqs=[FREQUENCY],
-            mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
-            name="mode",
-        ),
-        # Field profile for visualization
-        td.FieldMonitor(
-            size=(td.inf, td.inf, 0),
-            freqs=[FREQUENCY],
-            name="field_xy",
-        ),
+    # Vertical tapered arm (south <-> north)
+    v_vertices = [
+        (-WG_WIDTH / 2, -DESIGN_HALF),
+        (-taper_center_width / 2, 0),
+        (-WG_WIDTH / 2, DESIGN_HALF),
+        (WG_WIDTH / 2, DESIGN_HALF),
+        (taper_center_width / 2, 0),
+        (WG_WIDTH / 2, -DESIGN_HALF),
     ]
+    structures.append(
+        td.Structure(
+            geometry=td.PolySlab(
+                vertices=v_vertices,
+                slab_bounds=(-WG_HEIGHT / 2, WG_HEIGHT / 2),
+                axis=2,
+            ),
+            medium=Si,
+        )
+    )
 
     sim_box = td.Box.from_bounds(
-        rmin=(-buffer, -OUTPUT_SEPARATION / 2 - buffer, -1),
-        rmax=(taper_length + buffer, OUTPUT_SEPARATION / 2 + buffer, 1),
+        rmin=(-DESIGN_HALF - BUFFER, -DESIGN_HALF - BUFFER, -1),
+        rmax=(DESIGN_HALF + BUFFER, DESIGN_HALF + BUFFER, 1),
     )
 
     # --- Simulation ---
@@ -135,7 +159,7 @@ def create_simulation() -> td.Simulation:
         grid_spec=td.GridSpec.auto(min_steps_per_wvl=20, wavelength=WAVELENGTH),
         structures=structures,
         sources=[source],
-        monitors=monitors,
+        monitors=[mode_monitor, field_monitor],
         run_time=2e-12,
         medium=SiO2,  # cladding / background
         symmetry=(0, -1, 1),
@@ -145,9 +169,9 @@ def create_simulation() -> td.Simulation:
 
 
 def evaluate(sim_data):
-    """Evaluate the total mode transmission of the 1x2 splitter."""
+    """Average mode transmission across 1.5-1.6 um (west -> east)."""
 
     amp = sim_data["mode"].amps.sel(mode_index=0, direction="+").values
     T = np.abs(amp) ** 2
 
-    return 2 * T[0]
+    return float(np.mean(T))

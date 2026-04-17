@@ -25,9 +25,9 @@ def main():
     sim = create_simulation()
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    sim.scene.plot_structures_eps(z=0, ax=ax)
-    sim.plot_sources(z=0, ax=ax)
-    sim.plot_monitors(z=0.001, ax=ax)
+    sim.scene.plot_structures_eps(y=0, ax=ax)
+    sim.plot_sources(y=0, ax=ax)
+    sim.plot_monitors(y=0, ax=ax)
     ax.set_title("Top view (z = 0)")
     ax.set_aspect("equal")
     plt.tight_layout()

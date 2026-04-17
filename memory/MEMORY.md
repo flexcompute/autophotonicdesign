@@ -1,0 +1,1 @@
+- [3D FDTD grid resolution](feedback_3d_grid_resolution.md) — `min_steps_per_wvl` floor 20 for 3D, 25–30 for final verification; 12/16 are inaccurate.

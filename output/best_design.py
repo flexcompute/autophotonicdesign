@@ -240,12 +240,17 @@ def create_simulation() -> td.Simulation:
     )
 
     # --- Monitors ---
+    # Broadband mode-monitor frequencies: 31 points covering 1500-1600 nm.
+    broadband_wavelengths = np.linspace(1.50, 1.60, 31)
+    broadband_freqs = (td.C_0 / broadband_wavelengths).tolist()
+
     monitors = [
-        # Mode monitor in the 500 nm strip waveguide (fundamental TE).
+        # Mode monitor in the 500 nm strip waveguide (fundamental TE),
+        # sampled at 31 wavelengths from 1500 to 1600 nm for broadband IL.
         td.ModeMonitor(
             center=(-WG_LENGTH / 2, 0.0, 0.0),
             size=(0, 4 * wg_width, 6 * WG_HEIGHT),
-            freqs=[FREQUENCY],
+            freqs=broadband_freqs,
             mode_spec=td.ModeSpec(num_modes=1, target_neff=2.4),
             name="mode",
         ),

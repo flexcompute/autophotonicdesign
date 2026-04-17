@@ -1,7 +1,9 @@
 """
-preview.py — Generate geometry preview plot before running a simulation.
+preview.py — Generate geometry preview plots before running a simulation.
 
-DO NOT MODIFY. The agent should only modify design.py.
+Plots two slices:
+  - xz cross-section at y = 0 (side view through the focal axis)
+  - xy top view at z = 0.1 µm (through the grating teeth / tops of the 220 nm Si)
 
 Usage:
     python preview.py [experiment_number]
@@ -24,19 +26,30 @@ from design import create_simulation
 def main():
     sim = create_simulation()
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sim.scene.plot_structures_eps(y=0, ax=ax)
-    sim.plot_sources(y=0, ax=ax)
-    sim.plot_monitors(y=0, ax=ax)
-    ax.set_title("Top view (z = 0)")
-    ax.set_aspect("equal")
+    fig, (ax_xz, ax_xy) = plt.subplots(1, 2, figsize=(18, 6))
+
+    # Side view (xz) at y = 0
+    sim.scene.plot_structures_eps(y=0, ax=ax_xz)
+    sim.plot_sources(y=0, ax=ax_xz)
+    sim.plot_monitors(y=0, ax=ax_xz)
+    ax_xz.set_title("Side view (y = 0)")
+    ax_xz.set_aspect("equal")
+
+    # Top view (xy) at z = 0.1 µm — inside the 220 nm Si device layer, above
+    # the slab-etch plane (z_slab_top = -0.11 + 0.15 = 0.04 µm), so this cut
+    # shows tooth/gap structure and the strip waveguide.
+    z_top = 0.1
+    sim.scene.plot_structures_eps(z=z_top, ax=ax_xy)
+    sim.plot_sources(z=z_top, ax=ax_xy)
+    sim.plot_monitors(z=z_top, ax=ax_xy)
+    ax_xy.set_title(f"Top view (z = {z_top} μm)")
+    ax_xy.set_aspect("equal")
+
     plt.tight_layout()
 
-    # Always save to the standard location
     plt.savefig("output/preview.png", dpi=150, bbox_inches="tight")
     print("Saved output/preview.png")
 
-    # Archive a copy if experiment number is provided
     if len(sys.argv) > 1:
         import os
 

@@ -1,0 +1,71 @@
+experiment	metric	wall_time_s	status	description
+1	0.2441	110.6	KEPT	Baseline: period=0.63, DC=0.5, N=25, angle=10deg
+2	0.1848	30.2	DISCARDED	period=0.60 worse
+3	0.0008	31.2	DISCARDED	period=0.66 coupling flipped to +x
+4	0.0800	41.1	DISCARDED	period=0.64 worse than 0.63
+5	0.3238	26.9	KEPT	angle=14 period=0.644 (matched) +33% vs baseline
+6	0.3427	24.9	KEPT	angle=18 period=0.662
+7	0.3602	26.2	KEPT	angle=22 period=0.681
+8	0.3643	49.6	KEPT	angle=26 period=0.701 (marginal)
+9	0.2313	45.6	DISCARDED	N=35 worse 9	0.2313	45.6	DISCARDED	N=35 worse - beam shifted off optimal extraction region
+10	0.3073	26.5	DISCARDED	Apodization DC 0.3-0.7 symmetric, worse than uniform
+11	0.4954	27.4	KEPT	Apodization DC 0.2-0.5 linear, huge jump
+12	0.4798	30.2	DISCARDED	DC 0.15-0.5 too aggressive start
+13	0.4955	29.6	KEPT	DC 0.25-0.5 same as 0.20-0.5 (flat in this range)
+14	0.4564	39.9	DISCARDED	N=30 stretched DC ramp and shifted beam
+15	0.4507	31.5	DISCARDED	Quadratic DC ramp, too slow to reach peak scattering
+16	0.4646	28.6	DISCARDED	Sqrt ramp worse than linear
+17	0.5124	41.5	KEPT	angle=30 period=0.721 apodized linear 0.25-0.5
+18	0.5227	133.5	KEPT	angle=34 period=0.741 apodized
+19	0.4501	27.3	DISCARDED	angle=38 past optimum
+20	0.4941	31.3	DISCARDED	angle=36 past optimum
+21	0.4102	46.9	DISCARDED	period=0.750 too large
+22	0.5123	46.7	DISCARDED	period=0.735 worse than 0.741
+23	0.1054	33.7	DISCARDED	Composite blaze tooth detunes Bragg (extra scattering)
+24	0.4985	29.4	DISCARDED	beam shifted right (0.55*L) hurts
+25	0.5337	31.6	KEPT	beam_x = 0.45*L helps align with apodized alpha
+26	0.5300	28.0	DISCARDED	beam_x = 0.40*L worse than 0.45
+27	0.5308	28.2	DISCARDED	beam 0.47*L
+28	0.5342	35.8	KEPT	beam_x = 0.43*L marginal improvement
+29	0.5312	41.2	DISCARDED	angle=32 worse than 34
+30	0.5293	56.4	DISCARDED	DC 0.22-0.52 worse than 0.25-0.5
+31	0.5370	27.6	KEPT	DC 0.30-0.48 narrower range improved
+32	0.5378	55.3	KEPT	DC 0.32-0.46
+33	0.5368	33.1	DISCARDED	DC 0.35-0.44 too narrow
+34	0.4963	40.5	DISCARDED	period=0.746 worse
+35	0.5173	25.1	DISCARDED	Chirp 0.751->0.731 worse (wrong direction or too much)
+36	0.5388	39.1	KEPT	Reverse chirp 0.735->0.747 marginal gain
+37	0.5209	24.9	DISCARDED	Larger chirp 0.725-0.755 too much
+38	0.5394	24.3	KEPT	Small chirp 0.737-0.745 marginal
+39	0.5274	26.5	DISCARDED	N=28 stretched grating hurts
+40	0.5336	28.1	DISCARDED	N=22 slightly worse
+41	0.5067	36.5	DISCARDED	angle=33 worse
+42	0.5407	24.1	KEPT	beam_x=0.41 marginal gain
+43	0.5394	28.3	DISCARDED	beam 0.39 past optimum
+44	0.5379	32.2	DISCARDED	DC 0.31-0.45 slightly worse
+45	0.5408	30.4	KEPT	DC 0.33-0.47 tied best
+46	0.5385	30.6	DISCARDED	DC 0.34-0.48 worse
+47	0.5413	23.3	KEPT	Uniform DC 0.40 slightly better than linear ramp
+48	0.5368	27.2	DISCARDED	No chirp - loses 0.005
+49	0.5420	32.0	KEPT	Larger chirp 0.733-0.749
+50	0.5401	47.6	DISCARDED	Chirp 0.730-0.752 too wide
+51	0.4943	181.1	KEPT	3D baseline: f=12, phi_half=25, 2D-seeded params
+52	0.4831	282.7	DISCARDED	focal_length=16 worse
+53	0.4799	149.9	DISCARDED	focal_length=9 worse
+54	0.4676	175.9	DISCARDED	phi_half=30 worse
+55	0.4941	205.9	DISCARDED	phi_half=20 tied with 25
+56	0.4645	240.2	DISCARDED	beam_x=0.50 worse
+57	0.4885	179.4	DISCARDED	beam_x=0.35 worse
+58	0.4899	180.0	DISCARDED	DC 0.33-0.47 apodization hurt slightly
+59	0.4910	219.7	DISCARDED	uniform period slightly worse, chirp helps
+60	0.4188	229.7	DISCARDED	angle=36 worse (probably overshooting optimum in 3D)
+61	0.4223	183.6	DISCARDED	angle=32 worse; 34 is narrow 3D optimum
+62	0.5012	170.8	KEPT	n_eff_est=2.80 flatter ellipses improved
+63	0.5055	320.1	KEPT	n_eff_est=2.95 flatter ellipses help more
+64	0.5105	195.5	KEPT	n_eff_est=3.20 continues to improve
+65	0.5135	301.9	KEPT	n_eff=3.47 (nearly circular) further improves
+66	0.4830	192.8	DISCARDED	n_eff=10 (fully circular) overshoots
+67	0.5142	274.6	KEPT	n_eff=3.80 slight improvement
+68	0.5120	165.8	DISCARDED	n_eff=4.50 overshoots, peak near 3.80
+69	0.5142	170.3	KEPT	n_eff=4.00 tied with 3.80 (plateau)
+70	0.5127	165.4	DISCARDED	f=11 slightly worse than f=12

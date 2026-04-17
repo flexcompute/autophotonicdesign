@@ -1,0 +1,57 @@
+15:39:21 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+=== Building simulation ===
+15:39:22 EDT WARNING: Starting in version 2.11, the behavior of GaussianBeam    
+             with direction '-' and non-zero 'waist_distance' has changed. The  
+             waist position is now defined consistently for both forward- and   
+             backward-propagating beams: a positive 'waist_distance' always     
+             places the beam waist behind the source/monitor plane (toward the  
+             negative normal axis). This ensures reciprocity between Gaussian   
+             sources and overlap monitors used for port-based S-matrix          
+             calculations. If your simulation relied on the previous behavior   
+             (where the waist position flipped with direction), you may need to 
+             adjust your waist distance values.                                 
+  structures : 30
+  monitors   : 3
+  sim size   : (33.08, 29.58, 6.02) μm
+  run time   : 3.00e-12 s
+
+=== Submitting to Tidy3D ===
+             Created task 'autodesign' with resource_id                         
+             'fdve-8dea2323-a150-4ebb-b73e-c0b3da0bc685' and task_type 'FDTD'.  
+             View task using web UI at                                          
+             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-8dea2323-a15
+             0-4ebb-b73e-c0b3da0bc685'.                                         
+             Task folder: 'default'.                                            
+↑ simulation.hdf5.gz ━━━━━━━━━━━━━━━━━━━━━━━ 100.0% • 31.3/31.3 kB • ? • 0:00:00
+15:39:24 EDT Estimated FlexCredit cost: 8.319. Minimum cost depends on task     
+             execution details. Use 'web.real_cost(task_id)' to get the billed  
+             FlexCredit cost after a simulation run.                            
+15:39:26 EDT status = queued                                                    
+             To cancel the simulation, use 'web.abort(task_id)' or              
+             'web.delete(task_id)' or abort/delete the task in the web UI.      
+             Terminating the Python script will not stop the job running on the 
+             cloud.                                                             
+15:39:38 EDT status = preprocess                                                
+15:39:46 EDT starting up solver                                                 
+             running solver                                                     
+15:41:36 EDT early shutoff detected at 22%, exiting.                            
+solver progress (field decay = 8.12e-06) ━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+             status = postprocess                                               
+15:41:44 EDT status = success                                                   
+15:41:46 EDT View simulation result at                                          
+             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-8dea2323-a15
+             0-4ebb-b73e-c0b3da0bc685'.                                         
+↓ simulation_data.hdf5.gz ━━━━━━━━━━━━ 100.0% • 103.7/103.7 • 5.6 MB/s • 0:00:00
+                                                MB                              
+15:42:05 EDT Loading results from output/sim_data/latest.hdf5                   
+15:42:06 EDT WARNING: Warning messages were found in the solver log. For more   
+             information, check 'SimulationData.log' or use                     
+             'web.download_log(task_id)'.                                       
+
+=== Results ===
+metric: 0.5126792560427156
+wall_time_s: 165.4
+Saved output/field.png

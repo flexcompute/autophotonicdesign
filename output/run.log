@@ -1,0 +1,20 @@
+19:46:51 EDT WARNING: Using canonical configuration directory at                
+             '/Users/tom-flexcompute/.config/tidy3d'. Found legacy directory at 
+             '~/.tidy3d', which will be ignored. Remove it manually or run      
+             'tidy3d config migrate --delete-legacy' to clean up.               
+=== Building simulation ===
+  structures : 7
+  monitors   : 2
+  sim size   : (14.0, 6.0, 2.0) μm
+  run time   : 2.00e-12 s
+
+=== Submitting to Tidy3D ===
+19:46:53 EDT Loading simulation from local cache. View cached task using web UI 
+             at                                                                 
+             'https://tidy3d.simulation.cloud/workbench?taskId=fdve-5ab4c68f-3a5
+             f-47f9-bcf8-d4aad57099ad'.                                         
+
+=== Results ===
+metric: 0.9966295786652467
+wall_time_s: 3.2
+Saved output/field.png

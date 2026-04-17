@@ -1,0 +1,51 @@
+experiment	metric	wall_time_s	status	description
+1	0.0979	29.6	OK	Baseline linear Y (solid taper from 0.5um to 2.5um over 10um, abrupt split to two 0.5um WGs, 2um center separation).
+2	0.4177	28.4	OK	1x2 MMI W=3.0um L=4.2um, cosine-eased tapered access arms, 200nm center trench.
+3	0.8603	29.6	OK	MMI W=2.4um L=5.3um (symmetric 1x2 formula L=3*Lpi/8), same access arms.
+4	0.8831	31.2	OK	MMI W=2.4 L=5.0 (sweep optimum).
+5	0.9515	29.5	OK	Added 0.5um linear input taper 0.5->1.0um before MMI.
+6	0.9254	32.7	OK	Input taper exit widened to 1.2um - WORSE, discarded.
+7	0.4410	32.7	OK	Arm root narrowed to 0.7um by widening center trench - MUCH WORSE.
+8	0.9771	34.5	OK	Input taper length 1.0um (was 0.5).
+9	0.9864	38.2	OK	Input taper 2.0um.
+10	0.9203	33.7	OK	Footprint fix: device in [0,10]. Arms shortened to 3um (was 5um) - metric dropped.
+11	0.9611	30.8	OK	Taper=1.0 + MMI 5.0 + arms 4.0 (footprint-safe).
+12	0.9568	41.2	OK	Taper=1.5+MMI 5+arms 3.5 - worse than exp11.
+13	0.9482	35.8	OK	Parabolic input taper (t^2) - worse than linear.
+14	0.7678	29.9	OK	Adiabatic Y-junction (single polygon, slot at x=3.5) - WORSE than MMI.
+15	0.9743	31.4	OK	Narrower MMI W=2.2 L=4.2, longer taper=1.8, arms=4.0.
+16	0.9725	32.2	OK	Narrower MMI W=2.0 L=3.5 taper=2.5 - slight drop vs W=2.2.
+17	0.9860	29.8	OK	W=2.2 L=4.0 taper=1.8 arms=4.2.
+18	0.9736	26.4	OK	L=3.8 - worse.
+19	0.9822	40.6	OK	Taper=2.0 arms=4.0 - slightly worse.
+20	0.9815	27.6	OK	Cosine-eased input taper - slightly worse than linear.
+21	0.9805	28.8	OK	W=2.3 L=4.4 taper=1.6 - worse than W=2.2.
+22	0.9029	28.2	OK	MMI output taper to 1.8um - breaks self-imaging, WORSE.
+23	0.9935	31.6	OK	Narrow MMI W=2.1 L=3.6 taper=1.8 arms=4.6.
+24	0.9847	30.5	OK	W=2.0 L=3.2 - worse.
+25	0.9866	31.3	OK	W=2.1 L=3.8 - worse.
+26	0.9843	26.5	OK	W=2.1 L=3.5 - worse.
+27	0.9909	35.6	OK	W=2.1 L=3.6 taper=2.2 - worse.
+28	0.9947	37.0	OK	Taper=1.6 arms=4.8.
+29	0.9947	31.0	OK	Taper=1.4 arms=5.0 - tied with 1.6.
+30	0.9945	30.0	OK	Taper=1.2 - slight drop.
+31	0.9925	30.0	OK	L=3.7 taper=1.4 - worse.
+32	0.9899	30.0	OK	W=2.05 L=3.4 - worse.
+33	0.9942	30.0	OK	center_gap=0.16 - no significant change.
+34	0.9365	30.0	OK	Sine arm profile - much worse than cosine.
+35	0.9948	30.0	OK	taper_exit_w=0.95 - tiny improvement.
+36	0.9852	30.0	OK	taper_exit_w=0.85 - worse.
+37	0.9898	30.0	OK	W=2.15 L=3.75 - worse.
+38	0.9955	30.0	OK	L=3.65 Lt=1.4 (finetune sweep).
+39	0.9939	30.0	OK	L=3.70 - slight drop.
+40	0.9934	30.0	OK	taper_w=0.90 - worse.
+41	0.9957	30.0	OK	Lt=1.5 (final sweep).
+42	0.9956	30.0	OK	Lt=1.55 - essentially tied.
+43	0.9889	30.0	OK	center_gap=0.15 (DRC min) - worse.
+44	0.9942	30.0	OK	center_gap=0.25 - worse.
+45	0.9966	30.0	OK	Grid 30/wvl (prev 20).
+46	0.9956	30.0	OK	L=3.70 at grid30 - slightly worse.
+47	0.9945	30.0	OK	L=3.60 grid30 - worse.
+48	0.9965	30.0	OK	Lt=1.4 grid30 - essentially tied.
+49	0.9957	30.0	OK	wt=1.00 grid30 - worse than 0.95.
+50	0.9966	3.2	OK	Final validation - best design (W=2.1 L=3.65 Lt=1.5 wt=0.95, grid 30/wvl). 99.66% transmission, 0.015dB loss.

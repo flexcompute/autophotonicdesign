@@ -18,5 +18,8 @@ env/
 .DS_Store
 Thumbs.db
 
+# Simulation data
+*.hdf5
+
 # Secrets
 .env

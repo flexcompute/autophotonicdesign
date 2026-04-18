@@ -2,7 +2,7 @@
 
 You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop — never stopping, never asking the human for input.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Today, you are tasked to design a silicon photonic low-loss 90-degree waveguide bend at a fixed bend radius of **3 µm**.
 ---
 
 ## 1. Platform Reference
@@ -10,6 +10,7 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 - **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
 - **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
 - **Operating wavelength:** 1550 nm (telecom C-band)
+- **Bend radius:** 3 µm (fixed — do not change)
 
 ---
 
@@ -35,13 +36,14 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ### Device geometry
 
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
-- **Y-symmetry:** The device must be symmetric about y = 0.
+- **Bend radius:** fixed at 3 µm (centerline radius). Do not modify `BEND_RADIUS`.
+- **I/O interface:** the bend must connect to the fixed horizontal input waveguide (at y = 0, ending at x = 0) and the fixed vertical output waveguide (at x = 3, starting at y = 3) without gaps.
+- **Footprint:** the bend region must fit within a 6 µm × 6 µm envelope centered on the quadrant (0 ≤ x ≤ 6, -0.5 ≤ y ≤ 6). Do not extend into the input/output waveguides.
 - **Minimum feature size:** 150 nm for all gaps, widths, and radii.
 
 ### Code rules
 
-- Only modify `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`).
+- Only modify the **bend structure(s) inside `create_simulation()`** in `design.py`. Do not change `evaluate()`, the module-level I/O waveguides, source, mode monitor, or any module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `BEND_RADIUS`, `BUFFER`, `Si`, `SiO2`).
 - `design.py` must export `create_simulation()` and `evaluate(sim_data)`. The `evaluate` function may return a dict or a single scalar (higher = better).
 - No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
@@ -91,7 +93,7 @@ Run `python drc.py` to verify fabrication constraints automatically.
 
 ### Step 8 — Analyze
 
-Inspect `output/field.png` (Ey real and |E|). Note where light goes and where scattering or leakage occurs.
+Inspect `output/field.png` (Ey real and |E|). Note where light goes and where radiation, mode mismatch, or leakage occurs at the bend.
 
 ### Step 9 — Log
 
@@ -120,10 +122,10 @@ Before editing `design.py`, you may write and run Python scripts to inform your 
 
 ### Available tools
 
-- **Web search** — Look up papers, tutorials, and design guides for the device you're optimizing. Find proven topologies, typical dimensions, analytical design formulas, and state-of-the-art results. Do this especially at the start and when switching to a new topology.
-- **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec`, and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
-- **Parameter sweeps** — Sweep a parameter over a range using `td.web.Batch` or a loop. Pick the best value before committing.
-- **Analytical calculations** — MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
+- **Web search** — Look up papers, tutorials, and design guides for low-loss waveguide bends (Euler bends, Bezier bends, modified-width bends, offset bends, etc.). Find proven bend shapes, width-adjustment strategies, analytical bend-loss formulas, and state-of-the-art bend-loss values at similar radii.
+- **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Useful for computing the bend-mode profile and the mode mismatch between a straight waveguide and a curved waveguide at a given radius. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec` (with `bend_radius` for curved waveguides), and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
+- **Parameter sweeps** — Sweep a bend-shape parameter over a range using `td.web.Batch` or a loop. Pick the best value before committing.
+- **Analytical calculations** — Bend loss vs. radius, Euler spiral parameters, mode-mismatch integrals, etc., using NumPy.
 
 ### Rules
 
@@ -140,12 +142,12 @@ Before editing `design.py`, you may write and run Python scripts to inform your 
 
 When inspecting `output/preview.png`, verify:
 
-1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
+1. **Structures** — Horizontal WG, vertical WG, and bend are all visible. No missing pieces.
+2. **Connectivity** — The bend meets the horizontal waveguide at (0, 0) and the vertical waveguide at (3, 3) with no visible gap. Zoom into each junction. If a white line or gap is visible between the bend and either waveguide, **stop** — do not simulate until the gap is resolved.
+3. **Source** — Inside the horizontal input waveguide, before the bend, not in PML.
+4. **Monitor** — Inside the vertical output waveguide, after the bend, not in PML, not overlapping the bend region.
 5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ 0.5 µm gap.
-6. **Domain size** — Large enough for the full device with buffer.
+6. **Domain size** — Large enough to contain the full bend with buffer.
 
 ---
 
@@ -157,7 +159,7 @@ When inspecting `output/preview.png`, verify:
 experiment	metric	wall_time_s	status	description
 ```
 
-Create with the header row on the first experiment. Append one row per experiment. `experiment` is the sequential number (1, 2, 3…). `metric` is the scalar from `evaluate()` (or the primary value if a dict is returned).
+Create with the header row on the first experiment. Append one row per experiment. `experiment` is the sequential number (1, 2, 3…). `metric` is the scalar from `evaluate()` (or the primary value if a dict is returned) — here, the mode transmission through the bend (0 to 1, higher is better).
 
 ### `output/journal.md`
 
@@ -169,8 +171,8 @@ Entry template:
 ## Experiment N — <short title>
 
 - **Hypothesis:** What you changed and why.
-- **Key parameters:** Values modified (e.g., taper_length=5.0, mmi_width=3.0).
-- **Result:** metric = X.XXXX (total transmission, higher is better)
+- **Key parameters:** Values modified (e.g., bend_type=euler, width_profile=tapered, n_segments=12).
+- **Result:** metric = X.XXXX (bend transmission, higher is better)
 - **vs. previous best:** +/- X.XXXX (improved / worse / equal)
 - **Kept or discarded:** KEPT / DISCARDED
 - **Lesson learned:** One specific sentence.
@@ -180,7 +182,7 @@ Guidelines:
 
 - Number sequentially and include discarded experiments.
 - Be honest: "expected X but got Y because Z" is the most valuable kind of entry.
-- When switching topology, add a phase header (e.g., `# Phase 2: MMI Splitter`).
+- When switching bend topology (e.g., circular → Euler → Bezier), add a phase header (e.g., `# Phase 2: Euler Bend`).
 - Keep entries concise (3–5 lines).
 
 ---
@@ -198,6 +200,6 @@ Guidelines:
 
 ## 9. Strategy Tips
 
-- **Budget your experiments.** Spend early experiments exploring different strategies; save fine-tuning for later once you've found a promising topology.
+- **Budget your experiments.** Spend early experiments exploring different bend families (circular, Euler, Bezier, modified-width); save fine-tuning for later once you've found a promising topology.
 - **Coarse before fine.** Run coarse sweeps before detailed parameter tuning.
-- **Switch topology when stuck.** If tweaking parameters stops yielding gains, try a fundamentally different approach.
+- **Switch topology when stuck.** If tweaking parameters stops yielding gains, try a fundamentally different approach — e.g., curvature-continuous (Euler) transitions, width-modified bends to match the bent-mode profile, or lateral offsets at the straight↔curved interfaces to compensate mode shift.

@@ -1,0 +1,51 @@
+experiment	metric	wall_time_s	status	description
+1	0.8996346	1.3	KEPT	Baseline circular bend, R=12, 128 arc points
+2	0.9272725	46.5	KEPT	Euler p=0.5, clothoid-arc-clothoid
+3	0.9253712	98.2	DISCARDED	Euler p=0.3
+4	0.9133257	46.7	DISCARDED	Euler p=0.7
+5	0.9286536	44.0	KEPT	Euler p=0.4
+6	0.9314243	46.2	KEPT	Euler p=0.4 + sin^2 width taper w_ratio=1.3
+7	0.9297106	44.0	DISCARDED	Euler p=0.4 + w_ratio=1.5
+8	0.9315326	113.8	KEPT	Euler p=0.4 + w_ratio=1.2
+9	0.9312949	74.3	DISCARDED	Euler p=0.4 + w_ratio=1.1
+10	0.9214237	46.4	DISCARDED	Euler p=0.4 + w=1.2 + outward offset 0.1um
+11	0.9192177	46.1	DISCARDED	Euler p=0.4 + asym outer bump only 0.24um
+12	0.9308335	46.5	DISCARDED	Euler p=0.5 + w=1.25
+13	0.8523303	46.9	DISCARDED	sin² curvature profile + w=1.2 (R_min too tight)
+14	0.9321571	45.6	KEPT	Euler p=0.45 + w_ratio=1.2
+15	0.9320317	43.2	DISCARDED	Euler p=0.48 + w=1.2 (plateau)
+16	0.9319022	45.8	DISCARDED	Euler p=0.45 + w=1.25
+17	0.9320653	43.6	DISCARDED	Euler p=0.45 + w=1.15
+18	0.9416542	116.7	KEPT	Euler p=0.45 + w=1.2 + inward offset -0.1um
+19	0.9495363	43.2	KEPT	Euler p=0.45 + w=1.2 + inward offset -0.2um
+20	0.9553197	121.6	KEPT	Euler p=0.45 + w=1.2 + inward offset -0.3um
+21	0.9601854	45.2	KEPT	Euler p=0.45 + w=1.2 + inward offset -0.5um
+22	0.9502941	116.4	DISCARDED	Euler p=0.45 + w=1.2 + inward offset -0.8um
+23	0.9580771	46.8	DISCARDED	offset=-0.65
+24	0.9600454	46.6	DISCARDED	offset=-0.55
+25	0.9249466	136.6	DISCARDED	p=0.3 + w=1.2 + offset=-0.5
+26	0.9599967	44.4	DISCARDED	p=0.6 + w=1.2 + offset=-0.5
+27	0.8572624	44.7	DISCARDED	pure circular (p=0) + w=1.2 + offset=-0.5
+28	0.9658453	46.8	KEPT	p=0.45 + w=1.4 + offset=-0.5
+29	0.9659186	44.0	KEPT	p=0.45 + w=1.6 + offset=-0.5
+30	0.9300546	44.6	DISCARDED	p=0.45 + w=2.0 + offset=-0.5 (too wide)
+31	0.9719187	46.1	KEPT	p=0.45 + w=1.6 + offset=-0.7
+32	0.9559400	43.2	DISCARDED	offset=-1.0
+33	0.9706200	46.6	DISCARDED	offset=-0.8 w=1.6
+34	0.9727508	46.0	KEPT	p=0.45 + w=1.8 + offset=-0.8
+35	0.9734286	131.0	KEPT	p=0.45 + w=2.0 + offset=-1.0
+36	0.9624383	46.9	DISCARDED	w=2.5 offset=-1.3
+37	0.9684358	44.8	DISCARDED	w=2.2 offset=-1.1
+38	0.9750644	45.6	KEPT	p=0.45 + w=2.0 + offset=-1.1
+39	0.9712271	47.6	DISCARDED	w=2.0 offset=-1.2
+40	0.9750297	44.8	DISCARDED	w=2.1 offset=-1.15 (tied)
+41	0.9042488	47.1	DISCARDED	p=0.3 w=2.0 offset=-1.1
+42	0.9553151	43.4	DISCARDED	p=0.55 w=2.0 offset=-1.1
+43	0.6808225	43.4	DISCARDED	w_pow=1 (sin not sin²) - bad endpoint matching
+44	0.9675916	46.5	DISCARDED	p=0.4 w=2.0 offset=-1.1
+45	0.8679886	130.7	DISCARDED	broader sin^1.6 offset profile - too aggressive
+46	0.9748208	46.1	DISCARDED	w=2.0 offset=-1.05 (tied)
+47	0.3703123	49.7	DISCARDED	sin^4 offset profile (creates weird kink)
+48	0.9746065	44.7	DISCARDED	p=0.47 offset=-1.12 (tied)
+49	0.9691692	46.6	DISCARDED	w=2.3 offset=-1.2
+50	0.9746086	45.2	DISCARDED	w=1.95 offset=-1.08 (tied with best)

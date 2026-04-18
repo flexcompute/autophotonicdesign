@@ -23,3 +23,7 @@ Thumbs.db
 
 # Simulation data
 *.hdf5
+
+# Transient build artifacts
+output/run.log
+output/layout.gds

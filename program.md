@@ -2,15 +2,15 @@
 
 You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop — never stopping, never asking the human for input.
 
-Today, you are tasked to design a silicon photonic low-loss 90-degree waveguide bend at a fixed bend radius of **3 µm**.
+Today, you are tasked to design a silicon-nitride low-loss 90-degree waveguide bend at a fixed bend radius of **12 µm**.
 ---
 
 ## 1. Platform Reference
 
-- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
+- **Material system:** Silicon nitride (n ≈ 2.0) on SiO₂ (n = 1.44)
+- **Waveguide cross-section:** 1200 nm × 400 nm, single-mode TE at 1550 nm
 - **Operating wavelength:** 1550 nm (telecom C-band)
-- **Bend radius:** 3 µm (fixed — do not change)
+- **Bend radius:** 12 µm (fixed — do not change)
 
 ---
 
@@ -36,10 +36,10 @@ Today, you are tasked to design a silicon photonic low-loss 90-degree waveguide 
 
 ### Device geometry
 
-- **Bend radius:** fixed at 3 µm (centerline radius). Do not modify `BEND_RADIUS`.
-- **I/O interface:** the bend must connect to the fixed horizontal input waveguide (at y = 0, ending at x = 0) and the fixed vertical output waveguide (at x = 3, starting at y = 3) without gaps.
-- **Footprint:** the bend region must fit within a 6 µm × 6 µm envelope centered on the quadrant (0 ≤ x ≤ 6, -0.5 ≤ y ≤ 6). Do not extend into the input/output waveguides.
-- **Minimum feature size:** 150 nm for all gaps, widths, and radii.
+- **Bend radius:** fixed at 12 µm (centerline radius). Do not modify `BEND_RADIUS`.
+- **I/O interface:** the bend must connect to the fixed horizontal input waveguide (at y = 0, ending at x = 0) and the fixed vertical output waveguide (at x = 12, starting at y = 12) without gaps.
+- **Footprint:** the bend region must fit within a 20 µm × 20 µm envelope over the quadrant (0 ≤ x ≤ 20, -1 ≤ y ≤ 20). Do not extend into the input/output waveguides.
+- **Minimum feature size:** 150 nm for all gaps, widths, and radii (enforced by `drc.py`).
 
 ### Code rules
 
@@ -143,7 +143,7 @@ Before editing `design.py`, you may write and run Python scripts to inform your 
 When inspecting `output/preview.png`, verify:
 
 1. **Structures** — Horizontal WG, vertical WG, and bend are all visible. No missing pieces.
-2. **Connectivity** — The bend meets the horizontal waveguide at (0, 0) and the vertical waveguide at (3, 3) with no visible gap. Zoom into each junction. If a white line or gap is visible between the bend and either waveguide, **stop** — do not simulate until the gap is resolved.
+2. **Connectivity** — The bend meets the horizontal waveguide at (0, 0) and the vertical waveguide at (12, 12) with no visible gap. Zoom into each junction. If a white line or gap is visible between the bend and either waveguide, **stop** — do not simulate until the gap is resolved.
 3. **Source** — Inside the horizontal input waveguide, before the bend, not in PML.
 4. **Monitor** — Inside the vertical output waveguide, after the bend, not in PML, not overlapping the bend region.
 5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ 0.5 µm gap.

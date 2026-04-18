@@ -1,85 +1,87 @@
-# Photonic Device Auto-Design Agent
+# Low-Loss 90° SiN Waveguide Bend — Design Showcase
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+> This branch showcases a single run of the auto-design agent on a 90°
+> silicon-nitride waveguide bend at a fixed 12 µm bend radius.
+> **See the [main branch](../../tree/main) for the project introduction,
+> setup, and full description of the framework.**
 
-![schematic](schematic.svg)
+The agent was given a blank slate (a plain circular arc baseline) and
+asked to maximize single-mode transmission at 1550 nm for a SiN
+1.2 × 0.4 µm waveguide bending through 90° at R = 12 µm, with a 150 nm
+minimum feature size. Over 50 experiments it iterated through bend
+families (circular, Euler / clothoid-arc-clothoid), width tapers, and
+centerline offsets, converging on an Euler base with a widened middle
+and an inward-bowed centerline.
 
-## How It Works
+## Final Result
 
-Each iteration runs through a fixed loop:
+**97.51 % mode transmission ≈ 0.109 dB insertion loss** at 1550 nm
+(baseline circular bend: 89.96 %, ~0.46 dB).
 
-```
-Design → Verify (preview + DRC) → Simulate → Keep or Discard
-```
+### Geometry
 
-A persistent experiment journal (`output/journal.md`) gives the agent
-long-term memory across iterations, so it learns from both successes and
-failures and avoids repeating dead ends. The human's job is to define the
-problem (device type, constraints, target metric) in `program.md`; the
-agent does the engineering.
+![preview](output/preview.png)
 
-## Example Designs
+Bend parameters (connects (0, 0) → (12, 12)):
 
-See a few examples of what the AI photonic designer has designed:
+| Parameter | Value | Role |
+|---|---|---|
+| `p_euler` | 0.45 | clothoid-arc-clothoid mix (45 % of 90° is clothoid) |
+| `w_ratio` | 2.0 | peak width multiplier (1.2 µm → 2.4 µm at midpoint) |
+| `r_offset` | −1.1 µm | peak inward centerline shift at midpoint |
+| width / offset profile | sin²(π u) | zero value **and** zero derivative at endpoints |
 
-- [`1x2splitter`](../../tree/1x2splitter)
-- [`taper`](../../tree/taper)
-- [`crossing`](../../tree/crossing)
+Three cooperative techniques stack to give the final design:
 
+1. **Euler (clothoid-arc-clothoid) base** — curvature-continuous entry
+   and exit eliminate the abrupt K-step of a pure circular bend, killing
+   junction mode-mismatch (+3 %).
+2. **sin² symmetric width taper** — widens the middle of the bend to
+   2.4 µm, boosting bent-mode confinement; smoothly returns to 1.2 µm at
+   the junctions (+0.3 %).
+3. **sin² inward radial offset** — bows the centerline toward the bend
+   center, relaxing the average effective curvature of the path and
+   aligning the waveguide with the widened bent-mode centroid (+4 %).
 
-## Project Structure
+The sin²(π u) profile is essential — its zero derivative at u = 0 and
+u = 1 prevents kinks that would reintroduce reflection. Non-smooth
+profiles (sin¹, sin⁴) collapsed transmission below 70 %.
 
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `output/` | All generated files (logs, plots, journal, best design) |
+### Field Distribution
 
-## Setup
+![field](output/field.png)
 
-```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
-```
+The mode cleanly tracks the outer wall of the widened middle section
+with very little radiation on the inner sidewall and minimal ripple in
+the horizontal input, consistent with the 0.11 dB loss.
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+### Broadband Performance
 
-## Running
+![broadband](output/broadband_IL.png)
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+Monotonic rise from 0.074 dB at 1500 nm to 0.169 dB at 1600 nm — less
+than 0.1 dB variation across the full C-band.
 
-```bash
-claude "Follow the instructions in program.md and start designing!"
-```
+## Optimization Progress
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+![progress](output/progress.png)
 
-## Customizing for a Different Device
+Discarded runs (red ×) visible across the whole sweep — including the
+sin¹/sin⁴ profile-shape probes late in the run that established
+sin²(π u) as the optimal window. The two big steps in best-so-far come
+from (i) adopting the Euler base (exp 2) and (ii) discovering the
+inward-offset technique (exp 18–21).
 
-To adapt this framework to a new photonic device:
+Full reasoning and discarded experiments are in
+[output/journal.md](output/journal.md); raw metrics in
+[output/results.tsv](output/results.tsv).
 
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`)
-   is device-agnostic and does not need to change.
+## Files of Interest
 
-## Credits
-
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+- [design.py](design.py) — final device geometry
+- [output/best_design.py](output/best_design.py) — snapshot of the best design
+- [output/journal.md](output/journal.md) — experiment-by-experiment reasoning
+- [output/results.tsv](output/results.tsv) — raw metrics log
+- [output/broadband.py](output/broadband.py) — broadband IL sweep script
+- [output/progress.py](output/progress.py) — progress-plot script
+- [output/preview.png](output/preview.png), [output/field.png](output/field.png), [output/broadband_IL.png](output/broadband_IL.png), [output/progress.png](output/progress.png)

@@ -25,8 +25,8 @@ def plot_fields(sim_data):
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 5))
 
-    sim_data.plot_field("field_xy", "Ey", "real", ax=axes[0])
-    axes[0].set_title("Ey (real)")
+    sim_data.plot_field("field_xy", "Hz", "real", ax=axes[0])
+    axes[0].set_title("Hz (real)")
 
     sim_data.plot_field("field_xy", "E", "abs", ax=axes[1])
     axes[1].set_title("|E|")

@@ -2,14 +2,14 @@
 
 You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop — never stopping, never asking the human for input.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Today, you are tasked to design a SiN photonic low-loss Y splitter.
 ---
 
 ## 1. Platform Reference
 
-- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
-- **Operating wavelength:** 1550 nm (telecom C-band)
+- **Material system:** Silicon nitride (n = 2.0) on SiO₂ (n = 1.45)
+- **Waveguide cross-section:** 1000 nm × 800 nm
+- **Operating wavelength:** 1310 nm (telecom O-band)
 
 ---
 
@@ -41,7 +41,7 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ### Code rules
 
-- Only modify `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`).
+- Only modify the junction geometry inside `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Y_BRANCH_LENGTH`, `SiN`, `SiO2`, `INPUT_WG`, `OUTPUT_WG_UPPER`, `OUTPUT_WG_LOWER`, `SOURCE`, `MONITORS`, `SIM_BOX`).
 - `design.py` must export `create_simulation()` and `evaluate(sim_data)`. The `evaluate` function may return a dict or a single scalar (higher = better).
 - No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
@@ -170,7 +170,7 @@ Entry template:
 
 - **Hypothesis:** What you changed and why.
 - **Key parameters:** Values modified (e.g., taper_length=5.0, mmi_width=3.0).
-- **Result:** metric = X.XXXX (total transmission, higher is better)
+- **Result:** metric = X.XXXX dB (insertion loss, closer to 0 is better)
 - **vs. previous best:** +/- X.XXXX (improved / worse / equal)
 - **Kept or discarded:** KEPT / DISCARDED
 - **Lesson learned:** One specific sentence.

@@ -18,7 +18,7 @@ WAVELENGTH = 1.31  # um - O-band
 FREQUENCY = td.C_0 / WAVELENGTH
 WG_WIDTH = 1.0  # um
 WG_HEIGHT = 0.8  # um - SiN thickness
-OUTPUT_SEPARATION = 3.0  # um - center-to-center of output waveguides
+OUTPUT_SEPARATION = 2.0  # um - center-to-center of output waveguides
 Y_BRANCH_LENGTH = 10  # um
 
 # ============================================================
@@ -61,7 +61,7 @@ BUFFER = 2
 
 SOURCE = td.ModeSource(
     center=(-BUFFER / 2, 0, 0),
-    size=(0, WG_WIDTH * 3, WG_HEIGHT * 5),
+    size=(0, WG_WIDTH * 4, WG_HEIGHT * 6),
     source_time=td.GaussianPulse(freq0=FREQUENCY, fwidth=FREQUENCY / 20),
     direction="+",
     mode_spec=td.ModeSpec(num_modes=1, target_neff=2.0),

@@ -1,8 +1,9 @@
 # Photonic Device Auto-Design Agent
 
-You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop — never stopping, never asking the human for input.
+You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop.
 
 Today, you are tasked to design a silicon photonic low-loss Y splitter.
+
 ---
 
 ## 1. Platform Reference
@@ -15,19 +16,7 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ## 2. Project Files
 
-| File | Role | Editable? |
-|---|---|---|
-| `program.md` | Agent instructions (this document) | No |
-| `design.py` | Device geometry, parameters, evaluation | Yes — `create_simulation()` only |
-| `simulate.py` | Simulation harness (Tidy3D runner) | No |
-| `preview.py` | Geometry preview → `output/preview.png` | No |
-| `drc.py` | Design rule check → pass/fail + `output/drc.png` | No |
-| `output/best_design.py` | Snapshot of the best-performing design | Auto-managed |
-| `output/results.tsv` | Experiment log (structured metrics) | Yes |
-| `output/journal.md` | Experiment journal (reasoning and lessons) | Yes |
-| `output/field.png` | Field plots from latest simulation | Auto-generated |
-| `output/run.log` | Simulation stdout/stderr | Auto-generated |
-| `output/previews/` | Archived preview from each experiment | Auto-generated |
+You edit only `create_simulation()` in `design.py`. The harness scripts (`preview.py`, `drc.py`, `simulate.py`, `orchestrate.py`) are invoked by the steps below — don't modify them. Everything under `output/` is managed for you; read `principles.md`, `journal.md`, `results.tsv`, and the PNG artifacts, but treat `best_design.py` and `best_metric.txt` as harness state.
 
 ---
 
@@ -41,68 +30,64 @@ Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ### Code rules
 
-- Only modify `create_simulation()` in `design.py`. Do not change `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`).
-- `design.py` must export `create_simulation()` and `evaluate(sim_data)`. The `evaluate` function may return a dict or a single scalar (higher = better).
+- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`). `evaluate()` may return a dict or a scalar (higher = better).
 - No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
 ---
 
 ## 4. Experiment Loop
 
+**Before the first experiment:**
+
+1. Run `python orchestrate.py init` once. This creates `output/`, writes the `results.tsv` header, and seeds `journal.md`. Safe to re-run — it's idempotent.
+2. Do a **literature review** to establish design principles. Search for papers, tutorials, and design guides for the target device class. Cover common topologies, underlying physics, typical dimensions and analytical design formulas, and state-of-the-art metrics for comparison. Fully understand the design steps for each approach. Summarize the findings in `output/principles.md` — concise, structured by topology or theme. This becomes your stable reference and should guide topology choices throughout all 50 experiments.
+
 Repeat for experiments 1 through 50:
 
 ### Step 1 — Review
 
-Read `design.py`, `output/results.tsv`, and `output/journal.md`. Learn from all previous experiments, including discarded ones.
+Read `design.py`, `output/principles.md`, `output/results.tsv`, and `output/journal.md`. Ground the next move in the literature principles and the lessons of previous experiments, including discarded ones.
 
 ### Step 2 — Hypothesize
 
-Propose one specific change. Explain why you expect it to help, citing lessons from the journal.
+Propose one specific design change. Explain why you expect the change to help.
 
-### Step 3 — Explore (optional)
+### Step 3 — Explore (usually needed)
 
-Run analysis before committing to a design change. See [Section 5: Exploration](#5-exploration) for details.
+When you propose a new topology, sweep its key parameters (lengths, widths, radii) here to pick good values before committing. The 30-FDTD exploration budget is separate from the 50-experiment budget — use it. See [Section 5: Exploration](#5-exploration).
 
 ### Step 4 — Edit
 
-Apply the change to `design.py`.
+Apply the new design to `design.py`.
 
-### Step 5 — Preview
+### Step 5 — Verify geometry
 
-Verify geometry before spending simulation credits:
+Before spending simulation credits, run the automated fabrication check first, then inspect visually.
 
-1. Run `python preview.py N` (where N is the experiment number).
-2. Inspect `output/preview.png` (use image-reading capability).
-3. Check against the [Preview Checklist](#6-preview-checklist).
-4. If anything looks wrong, fix `design.py` and re-preview.
+1. Run `python drc.py`.
+   - **DRC FAILED** → inspect `output/drc.png` (red = width, blue = spacing). Fix `design.py` and re-run `drc.py`. Do NOT proceed until it passes.
+2. **DRC PASSED** → run `python preview.py N` (N = experiment number) and inspect `output/preview.png` against the [Preview Checklist](#6-preview-checklist). If anything looks wrong, fix `design.py` and re-run both `drc.py` and `preview.py`.
 
-### Step 6 — DRC Check
+### Step 6 — Simulate
 
-Run `python drc.py` to verify fabrication constraints automatically.
+Run `python simulate.py > output/run.log 2>&1`. If it crashes, check `tail -n 50 output/run.log`:
 
-- **DRC PASSED** → proceed to simulate.
-- **DRC FAILED** → inspect `output/drc.png` to see where violations are (red = width, blue = spacing). Fix the geometry in `design.py`, re-preview, and re-run DRC. Do NOT simulate until DRC passes.
+- **Typo / import error** — fix and retry this step.
+- **Divergence** — reduce `run_time` in `create_simulation()` or check for geometry overlaps; retry.
+- **Tidy3D server error** — wait 30 s and retry once; if it still fails, proceed to Step 7.
+- **Fundamentally broken idea** — proceed to Step 7 with a `--lesson` describing the crash; `orchestrate.py` auto-reverts.
 
-### Step 7 — Simulate
+### Step 7 — Analyze and log
 
-1. Run `python simulate.py > output/run.log 2>&1`.
-2. Extract the result: `grep "metric" output/run.log`.
-3. If output is empty, the simulation crashed. Read `tail -n 50 output/run.log`, fix the issue, and retry.
+If the simulation completed, inspect `output/field.png` (Ey real and |E|) — your observations feed the `--lesson`. Then run:
 
-### Step 8 — Analyze
+```bash
+python orchestrate.py log N \
+    --hypothesis "What you changed and why (one line)" \
+    --lesson    "What you learned from the result (one line)"
+```
 
-Inspect `output/field.png` (Ey real and |E|). Note where light goes and where scattering or leakage occurs.
-
-### Step 9 — Log
-
-1. Append a row to `output/results.tsv` (see [Section 7: Logging](#7-logging)).
-2. Append an entry to `output/journal.md` (see [Section 7: Logging](#7-logging)).
-
-### Step 10 — Decide
-
-- **First experiment →** Always keep (establishes baseline).
-- **Metric improved →** Keep: `cp design.py output/best_design.py`
-- **Metric worse or equal →** Discard: `cp output/best_design.py design.py`
+`orchestrate.py` parses `output/run.log`, appends the TSV row and journal entry, compares metric vs. previous best, and either snapshots `design.py` as the new best or reverts it from `output/best_design.py`. It prints a one-line verdict (`KEPT` / `DISCARDED` / `CRASH`) — read it before starting the next experiment.
 
 ### After 50 experiments
 
@@ -116,20 +101,19 @@ Print a summary:
 
 ## 5. Exploration
 
-Before editing `design.py`, you may write and run Python scripts to inform your design choices. Cheap analysis prevents wasted experiments.
+Use exploration to fine-tune parameter values (lengths, widths, radii, etc.) for a given topology. The 50-experiment budget is for topology-level moves; numerical tuning lives here, where you can sweep cheaply. Write and run Python scripts to inform your design choices before committing.
 
 ### Available tools
 
-- **Web search** — Look up papers, tutorials, and design guides for the device you're optimizing. Find proven topologies, typical dimensions, analytical design formulas, and state-of-the-art results. Do this especially at the start and when switching to a new topology.
 - **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec`, and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
-- **Parameter sweeps** — Sweep a parameter over a range using `td.web.Batch` or a loop. Pick the best value before committing.
-- **Analytical calculations** — MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
+- **Parameter sweeps (primary tool for fine tuning)** — Sweep each geometry parameter over a range using `td.web.Batch` or a loop and pick the best value. This is how you tune lengths, widths, and radii — not by burning sequential experiments each tweaking one number.
+- **Advanced optimization** — When grid sweeps scale poorly (high-dimensional or multi-modal parameter spaces), use smarter algorithms such as **Bayesian optimization**, **particle swarm**, or **adjoint inverse design**.
+- **Analytical calculations** — For example MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
 
 ### Rules
 
-- Maximum **20 FDTD simulations** per exploration script (sweeps and batches included). Mode solving and analytical calculations are unlimited.
+- Maximum **30 FDTD simulations** per experiment's exploration stage (sweeps and batches included, summed across any scripts you run). Mode solving and analytical calculations are unlimited.
 - Write scripts to a temp file (e.g., `output/explore.py`), run, and read output.
-- Log useful findings in the journal entry.
 - Exploration does not count toward the 50-experiment budget.
 
 ---
@@ -144,60 +128,14 @@ When inspecting `output/preview.png`, verify:
 2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
 3. **Source** — Inside the input waveguide, before the device, not in PML.
 4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
-5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ 0.5 µm gap.
+5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ half wavelength between device features and the simulation-domain boundary.
 6. **Domain size** — Large enough for the full device with buffer.
 
 ---
 
-## 7. Logging
+## 7. Strategy Tips
 
-### `output/results.tsv`
-
-```
-experiment	metric	wall_time_s	status	description
-```
-
-Create with the header row on the first experiment. Append one row per experiment. `experiment` is the sequential number (1, 2, 3…). `metric` is the scalar from `evaluate()` (or the primary value if a dict is returned).
-
-### `output/journal.md`
-
-This is your long-term memory. Write so a future agent (or yourself after context compression) can understand the full history.
-
-Entry template:
-
-```markdown
-## Experiment N — <short title>
-
-- **Hypothesis:** What you changed and why.
-- **Key parameters:** Values modified (e.g., taper_length=5.0, mmi_width=3.0).
-- **Result:** metric = X.XXXX (total transmission, higher is better)
-- **vs. previous best:** +/- X.XXXX (improved / worse / equal)
-- **Kept or discarded:** KEPT / DISCARDED
-- **Lesson learned:** One specific sentence.
-```
-
-Guidelines:
-
-- Number sequentially and include discarded experiments.
-- Be honest: "expected X but got Y because Z" is the most valuable kind of entry.
-- When switching topology, add a phase header (e.g., `# Phase 2: MMI Splitter`).
-- Keep entries concise (3–5 lines).
-
----
-
-## 8. Crash Handling
-
-| Situation | Action |
-|---|---|
-| Import error or typo | Fix and retry the same experiment. |
-| Simulation diverges | Reduce `run_time` or check for geometry overlaps. |
-| Tidy3D server error | Wait 30 s, retry once. If it still fails, log the crash, revert, and move on. |
-| Fundamentally broken idea | Log the crash, revert (`cp output/best_design.py design.py`), and try something else. |
-
----
-
-## 9. Strategy Tips
-
-- **Budget your experiments.** Spend early experiments exploring different strategies; save fine-tuning for later once you've found a promising topology.
-- **Coarse before fine.** Run coarse sweeps before detailed parameter tuning.
-- **Switch topology when stuck.** If tweaking parameters stops yielding gains, try a fundamentally different approach.
+- **Experiments = topology moves. Exploration = parameter tuning.** Use each of your 50 experiment slots for a meaningfully different shape, junction, or device class. Numerical tuning (lengths, widths, radii) happens in Step 3 via parameter sweeps — not by burning experiments each tweaking one number.
+- **Coarse before fine.** Within a sweep, run a coarse grid before refining around the best point.
+- **Switch topology when stuck.** If the current topology plateaus after a sweep, try a fundamentally different approach. When you do, manually append a phase header to `journal.md` (e.g., `# Phase 2: MMI Splitter`).
+- **Be honest in lessons.** "Expected X but got Y because Z" is the most valuable kind of journal entry — include it for discarded and crashed experiments too.

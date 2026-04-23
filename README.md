@@ -14,17 +14,22 @@ human intervention.
 
 ## How It Works
 
-Each iteration runs through a fixed loop:
+Before the loop, the agent does a one-time **literature review** of the
+target device class — common topologies, underlying physics, state-of-the-art
+metrics — and captures it in `output/principles.md` as a stable design
+reference.
+
+Each iteration then runs through a fixed loop:
 
 ```
-Design → Verify (preview + DRC) → Simulate → Keep or Discard
+Explore → Design → Verify (DRC + preview) → Simulate → Log (keep/discard)
 ```
 
-A persistent experiment journal (`output/journal.md`) gives the agent
-long-term memory across iterations, so it learns from both successes and
-failures and avoids repeating dead ends. The human's job is to define the
-problem (device type, constraints, target metric) in `program.md`; the
-agent does the engineering.
+Long-term memory spans two files: `output/principles.md` holds the literature
+review, and `output/journal.md` logs each experiment's hypothesis and lesson.
+Together they let the agent learn from both successes and failures and avoid
+repeating dead ends. The human's job is to define the problem (device type,
+constraints, target metric) in `program.md`; the agent does the engineering.
 
 ## Example Designs
 
@@ -44,7 +49,8 @@ See a few examples of what the AI photonic designer has designed:
 | `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
 | `preview.py` | Generates geometry preview for visual inspection |
 | `drc.py` | Fabrication rule check via KLayout |
-| `output/` | All generated files (logs, plots, journal, best design) |
+| `orchestrate.py` | Post-simulation bookkeeping: parses run log, updates TSV/journal, handles keep/discard |
+| `output/` | All generated files (principles, logs, plots, journal, best design) |
 
 ## Setup
 
@@ -75,8 +81,8 @@ To adapt this framework to a new photonic device:
 1. Edit `program.md` — describe the target device, metric, and constraints.
 2. Edit `design.py` — update the initial geometry and the `evaluate()`
    function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`)
-   is device-agnostic and does not need to change.
+3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`,
+   `orchestrate.py`) is device-agnostic and does not need to change.
 
 ## Credits
 

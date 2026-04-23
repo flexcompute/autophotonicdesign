@@ -19,6 +19,8 @@ FREQUENCY = td.C_0 / WAVELENGTH
 WG_WIDTH = 0.5  # um - single-mode at 1550nm
 WG_HEIGHT = 0.22  # um - standard SOI thickness
 OUTPUT_SEPARATION = 2.0  # um - center-to-center of output waveguides
+TAPER_LENGTH = 10  # um
+BUFFER = 2  # um - padding between structures and simulation boundary
 
 # ============================================================
 # Materials
@@ -27,106 +29,110 @@ Si = td.Medium.from_nk(n=3.47, k=0, freq=FREQUENCY)
 SiO2 = td.Medium.from_nk(n=1.44, k=0, freq=FREQUENCY)
 
 
+# ============================================================
+# Waveguide structures
+# ============================================================
+input_waveguide = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(-1e3, -WG_WIDTH / 2, -WG_HEIGHT / 2),
+        rmax=(0, WG_WIDTH / 2, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+
+output_waveguide_upper = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(
+            TAPER_LENGTH,
+            OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
+            -WG_HEIGHT / 2,
+        ),
+        rmax=(1e3, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+
+output_waveguide_lower = td.Structure(
+    geometry=td.Box.from_bounds(
+        rmin=(
+            TAPER_LENGTH,
+            -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
+            -WG_HEIGHT / 2,
+        ),
+        rmax=(1e3, -OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
+    ),
+    medium=Si,
+)
+
+
+# ============================================================
+# Source
+# ============================================================
+source = td.ModeSource(
+    center=(-BUFFER / 2, 0, 0),
+    size=(0, WG_WIDTH * 4, WG_HEIGHT * 6),
+    source_time=td.GaussianPulse(freq0=FREQUENCY, fwidth=FREQUENCY / 20),
+    direction="+",
+    mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
+    mode_index=0,
+    name="input_mode",
+)
+
+
+# ============================================================
+# Monitors
+# ============================================================
+monitors = [
+    td.ModeMonitor(
+        center=(TAPER_LENGTH + BUFFER / 2, OUTPUT_SEPARATION / 2, 0),
+        size=source.size,
+        freqs=[FREQUENCY],
+        mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
+        name="mode",
+    ),
+    # Field profile for visualization
+    td.FieldMonitor(
+        size=(td.inf, td.inf, 0),
+        freqs=[FREQUENCY],
+        name="field_xy",
+    ),
+]
+
+
+# ============================================================
+# Simulation domain
+# ============================================================
+sim_box = td.Box.from_bounds(
+    rmin=(-BUFFER, -OUTPUT_SEPARATION / 2 - BUFFER, -1),
+    rmax=(TAPER_LENGTH + BUFFER, OUTPUT_SEPARATION / 2 + BUFFER, 1),
+)
+
+
 def create_simulation() -> td.Simulation:
     """Build and return a Tidy3D simulation of the 1x2 splitter."""
-
-    # --- Structures ---
-    structures = []
-
-    # Input waveguide
-    structures.append(
-        td.Structure(
-            geometry=td.Box.from_bounds(
-                rmin=(-1e3, -WG_WIDTH / 2, -WG_HEIGHT / 2),
-                rmax=(0, WG_WIDTH / 2, WG_HEIGHT / 2),
-            ),
-            medium=Si,
-        )
-    )
-
-    taper_length = 10
 
     # Splitting junction — linear taper from input width to full output span
     junction_vertices = [
         (0, -WG_WIDTH / 2),
         (0, WG_WIDTH / 2),
-        (taper_length, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2),
-        (taper_length, -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2),
+        (TAPER_LENGTH, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2),
+        (TAPER_LENGTH, -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2),
     ]
-    structures.append(
-        td.Structure(
-            geometry=td.PolySlab(
-                vertices=junction_vertices,
-                slab_bounds=(-WG_HEIGHT / 2, WG_HEIGHT / 2),
-                axis=2,
-            ),
-            medium=Si,
-        )
-    )
-
-    # Output waveguide 1 (upper, +y)
-    structures.append(
-        td.Structure(
-            geometry=td.Box.from_bounds(
-                rmin=(
-                    taper_length,
-                    OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
-                    -WG_HEIGHT / 2,
-                ),
-                rmax=(1e3, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
-            ),
-            medium=Si,
-        )
-    )
-
-    # Output waveguide 2 (lower, -y)
-    structures.append(
-        td.Structure(
-            geometry=td.Box.from_bounds(
-                rmin=(
-                    taper_length,
-                    -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
-                    -WG_HEIGHT / 2,
-                ),
-                rmax=(1e3, -OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
-            ),
-            medium=Si,
-        )
-    )
-
-    buffer = 2
-    # --- Source ---
-    source = td.ModeSource(
-        center=(-buffer / 2, 0, 0),
-        size=(0, WG_WIDTH * 4, WG_HEIGHT * 6),
-        source_time=td.GaussianPulse(freq0=FREQUENCY, fwidth=FREQUENCY / 20),
-        direction="+",
-        mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
-        mode_index=0,
-        name="input_mode",
-    )
-
-    # --- Monitors ---
-    monitors = [
-        td.ModeMonitor(
-            center=(taper_length + buffer / 2, OUTPUT_SEPARATION / 2, 0),
-            size=source.size,
-            freqs=[FREQUENCY],
-            mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
-            name="mode",
+    junction = td.Structure(
+        geometry=td.PolySlab(
+            vertices=junction_vertices,
+            slab_bounds=(-WG_HEIGHT / 2, WG_HEIGHT / 2),
+            axis=2,
         ),
-        # Field profile for visualization
-        td.FieldMonitor(
-            size=(td.inf, td.inf, 0),
-            freqs=[FREQUENCY],
-            name="field_xy",
-        ),
+        medium=Si,
+    )
+
+    structures = [
+        input_waveguide,
+        junction,
+        output_waveguide_upper,
+        output_waveguide_lower,
     ]
-
-    sim_box = td.Box.from_bounds(
-        rmin=(-buffer, -OUTPUT_SEPARATION / 2 - buffer, -1),
-        rmax=(taper_length + buffer, OUTPUT_SEPARATION / 2 + buffer, 1),
-    )
 
     # --- Simulation ---
     sim = td.Simulation(

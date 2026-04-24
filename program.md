@@ -2,15 +2,17 @@
 
 You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Today, you are tasked to design a SiN edge coupler at 1310 nm.
 
 ---
 
 ## 1. Platform Reference
 
-- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
-- **Operating wavelength:** 1550 nm (telecom C-band)
+- **Material system:** SiN (n = 2.00) core, SiO₂ (n = 1.447) cladding/BOX, Si (n = 3.504) substrate
+- **Layer stack (bottom → top):** Si substrate / 2 µm SiO₂ BOX / 400 nm SiN / 2 µm SiO₂ top cladding / air
+- **Waveguide cross-section:** 1 µm × 400 nm, single-mode TE at 1310 nm
+- **Operating wavelength:** 1310 nm (telecom O-band)
+- **Input:** Gaussian beam in free space at x < 0, MFD = 3.2 µm, launched at the chip facet (x = 0)
 
 ---
 
@@ -24,13 +26,15 @@ You edit only `create_simulation()` in `design.py`. The harness scripts (`previe
 
 ### Device geometry
 
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
+- **Taper length:** Fixed at 50 µm (x direction).
+- **Chip facet:** Fixed at x = 0. The inverse-taper tip sits on the facet.
 - **Y-symmetry:** The device must be symmetric about y = 0.
 - **Minimum feature size:** 150 nm for all gaps, widths, and radii.
 
 ### Code rules
 
-- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`). `evaluate()` may return a dict or a scalar (higher = better).
+- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `TAPER_LENGTH`, `MFD`, `SiN`, `SiO2`, `Si`, `Air`). `evaluate()` may return a dict or a scalar (higher = better).
+- `create_simulation()` takes design variables as keyword arguments (starting with `tip_width`); add more kwargs as needed but keep a working default.
 - No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
 ---
@@ -125,10 +129,10 @@ Use exploration to fine-tune parameter values (lengths, widths, radii, etc.) for
 When inspecting `output/preview.png`, verify:
 
 1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
-5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ half wavelength between device features and the simulation-domain boundary.
+2. **Connectivity** — Taper connects to the 1 µm output waveguide. Zoom into the junction. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
+3. **Source** — Gaussian beam at x < 0 (outside the facet), centered at (y, z) = (0, 0), not in PML.
+4. **Monitors** — Output mode monitor after the taper, inside the 1 µm waveguide, not in PML.
+5. **PML clearance** — Leave ≥ half wavelength between device features and the simulation-domain boundary. The Gaussian beam is wide (3.2 µm MFD) — the y and z PML must clear it.
 6. **Domain size** — Large enough for the full device with buffer.
 
 ---

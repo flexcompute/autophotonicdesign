@@ -1,91 +1,98 @@
-# Photonic Device Auto-Design Agent
+# SiN Edge Coupler - Design Showcase
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+> This branch showcases a run of the auto-design agent on a 1310 nm
+> silicon-nitride edge coupler for a 3.2 um MFD Gaussian input beam.
+> **See the [main branch](../../tree/main) for the project introduction,
+> setup, and full description of the framework.**
 
-![schematic](schematic.svg)
+The agent started from a simple linear inverse taper and optimized coupling
+from free space into the fundamental TE mode of a 1 um wide, 400 nm thick SiN
+waveguide. The device was constrained to a fixed 50 um taper length, a chip
+facet at x = 0, y symmetry, and a 150 nm minimum feature size.
 
-## How It Works
+Across 10 logged experiments, plus broadband and parameter-sweep simulations,
+the design evolved from a plain 180 nm linear inverse taper to a smooth
+single-solid taper with localized profile corrections that delay mode
+compression through the middle of the device and recover width near the output.
 
-Before the loop, the agent does a one-time **literature review** of the
-target device class — common topologies, underlying physics, state-of-the-art
-metrics — and captures it in `output/principles.md` as a stable design
-reference.
+## Final Result
 
-Each iteration then runs through a fixed loop:
+**84.72% coupling efficiency = -0.72 dB insertion loss** at 1310 nm.
 
-```
-Explore → Design → Verify (DRC + preview) → Simulate → Log (keep/discard)
-```
+The optimized design also stays flat across the O-band sweep that was run:
+from **-0.768 dB at 1260 nm** to **-0.770 dB at 1360 nm**, with a best point
+of **-0.720 dB near 1308-1310 nm**.
 
-Long-term memory spans two files: `output/principles.md` holds the literature
-review, and `output/journal.md` logs each experiment's hypothesis and lesson.
-Together they let the agent learn from both successes and failures and avoid
-repeating dead ends. The human's job is to define the problem (device type,
-constraints, target metric) in `program.md`; the agent does the engineering.
+## Geometry
 
-## Example Designs
+![preview](output/preview.png)
 
-See a few examples of what the AI photonic designer has designed:
+Layout:
 
-- [`1x2splitter`](../../tree/1x2splitter)
-- [`taper`](../../tree/taper)
-- [`crossing`](../../tree/crossing)
+| Section | x-range (um) | Description |
+|---|---:|---|
+| Facet tip | 0.00 | 200 nm SiN inverse-taper tip at the chip facet |
+| Corrected taper | 0.00 - 50.00 | Smooth nonlinear taper from 200 nm to 1.0 um |
+| Output guide | 50.00+ | Straight 1.0 um wide SiN waveguide |
 
+The final taper width is generated from a normalized profile:
 
-## Project Structure
-
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `orchestrate.py` | Post-simulation bookkeeping: parses run log, updates TSV/journal, handles keep/discard |
-| `output/` | All generated files (principles, logs, plots, journal, best design) |
-
-## Setup
-
-```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
+```text
+w(x) = 0.20 um + 0.80 um * s(x)
 ```
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+where `s(x)` is a power-law taper (`power = 2.20`) multiplied by three smooth
+Gaussian corrections:
 
-## Running
+| Correction | Center x/L | Width | Amplitude | Effect |
+|---|---:|---:|---:|---|
+| Early | 0.20 | 0.10 | -0.15 | Slightly delays initial width growth |
+| Mid | 0.52 | 0.18 | -0.46 | Delays main mode compression |
+| Late | 0.72 | 0.14 | +0.18 | Recovers width before the output guide |
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+This single-piece solid taper passed the automated 150 nm DRC. Trident side
+rails and SWG front sections were explored, but both scattered more power than
+the smooth solid taper for this 400 nm SiN stack and 50 um length.
 
-```bash
-claude "Follow the instructions in program.md and start designing!"
-```
+## Field Distribution
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+![field](output/field.png)
 
-## Customizing for a Different Device
+The field is captured at the facet, remains centered through the taper, and
+compresses smoothly into the 1 um output waveguide with low visible lateral
+radiation.
 
-To adapt this framework to a new photonic device:
+## Broadband Response
 
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`,
-   `orchestrate.py`) is device-agnostic and does not need to change.
+![broadband](output/broadband_insertion_loss.png)
 
-## Credits
+Broadband data are in
+[output/broadband_insertion_loss.tsv](output/broadband_insertion_loss.tsv).
+The plotted quantity is `10log10(T)`, so more negative values mean larger
+loss.
 
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+## Optimization Progress
+
+![progress](output/progress.png)
+
+The baseline linear taper started at **74.78% coupling**. The largest gain came
+from replacing the linear taper with a slow-start nonlinear taper; later gains
+came from localized profile corrections and retuning the tip width under the
+corrected profile.
+
+Full reasoning and discarded explorations are in
+[output/journal.md](output/journal.md); raw metrics are in
+[output/results.tsv](output/results.tsv).
+
+## Files of Interest
+
+- [design.py](design.py) - final device geometry
+- [output/best_design.py](output/best_design.py) - snapshot of the best design
+- [output/principles.md](output/principles.md) - literature/design principles
+- [output/journal.md](output/journal.md) - experiment-by-experiment reasoning
+- [output/results.tsv](output/results.tsv) - raw logged experiment metrics
+- [output/preview.png](output/preview.png) - final geometry preview
+- [output/field.png](output/field.png) - final field distribution
+- [output/progress.png](output/progress.png) - optimization progress plot
+- [output/broadband_insertion_loss.png](output/broadband_insertion_loss.png) - broadband response plot
+- [output/broadband_insertion_loss.tsv](output/broadband_insertion_loss.tsv) - broadband response data

@@ -1,0 +1,34 @@
+23:40:42 Eastern Daylight Time WARNING: Using canonical configuration directory 
+                               at 'C:\Users\xinzhong\.config\tidy3d'. Found     
+                               legacy directory at '~/.tidy3d', which will be   
+                               ignored. Remove it manually or run 'tidy3d config
+                               migrate --delete-legacy' to clean up.            
+=== Building simulation ===
+  structures : 4
+  monitors   : 2
+  sim size   : (56.0, 10.2, 8.4) μm
+  run time   : 4.00e-12 s
+
+=== Submitting to Tidy3D ===
+23:40:45 Eastern Daylight Time Created task 'autodesign' with resource_id       
+                               'fdve-08422885-715a-4f0e-8f1b-df81c6e415a0' and  
+                               task_type 'FDTD'.                                
+                               View task using web UI at                        
+                               'https://tidy3d.simulation.cloud/workbench?taskId
+                               =fdve-08422885-715a-4f0e-8f1b-df81c6e415a0'.     
+                               Task folder: 'default'.                          
+↑ simulation.hdf5.gz ------------------------- 100.0% • 4.6/4.6 kB • ? • 0:00:00
+23:40:47 Eastern Daylight Time Estimated FlexCredit cost: 4.927. Minimum cost   
+                               depends on task execution details. Use           
+                               'web.real_cost(task_id)' to get the billed       
+                               FlexCredit cost after a simulation run.          
+23:40:48 Eastern Daylight Time status = success                                 
+↓ simulation_data.hdf5.gz ----------- 100.0% • 30.4/30.4   • 25.4 MB/s • 0:00:00
+                                               MB                               
+23:40:51 Eastern Daylight Time Loading simulation from                          
+                               output\sim_data\latest.hdf5                      
+
+=== Results ===
+metric: 0.8472035556326439
+wall_time_s: 10.5
+Saved output/field.png

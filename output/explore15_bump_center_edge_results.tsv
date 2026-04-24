@@ -1,0 +1,4 @@
+rank	name	metric
+1	bce_mc57_lc66	0.835138831
+2	bce_mc57_lc72	0.833712506
+3	bce_mc57_lc78	0.831753227

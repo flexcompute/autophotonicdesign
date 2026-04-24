@@ -1,0 +1,11 @@
+experiment	metric	wall_time_s	status	description
+1	0.747834	160.1	KEPT	Establish the 180 nm linear inverse taper baseline before topology changes.
+2	0.817828	10.3	KEPT	Use a 180 nm tip with a power-law exponent of 1.7 to slow the initial width expansion and reduce tip-mode radiation.
+3	0.825485	31.6	KEPT	Refine the single inverse taper to a 200 nm tip and exponent 1.85 after local FDTD tuning around the experiment-2 optimum.
+4	0.828901	9.6	KEPT	Retune the single inverse taper to a 210 nm tip and exponent 2.25 after wider-tip/high-exponent sweeps showed a shallow optimum there.
+5	0.835391	10.0	KEPT	Apply a smooth local profile correction: reduce mid-taper width growth and slightly boost the late taper to delay compression without changing the 210 nm tip.
+6	0.839469	37.9	KEPT	Strengthen the local profile correction to mid_bump -0.34 and late_bump 0.14 after the previous bump optimum sat on the delayed-compression edge.
+7	0.841568	40.8	KEPT	Move the delayed-compression correction later in the taper and shift the late recovery earlier to match the field evolution seen in the refined bump profile.
+8	0.843701	52.9	KEPT	Retune the shifted bump amplitudes to mid_bump -0.46 and late_bump 0.18 after moving the correction centers changed the optimum.
+9	0.847061	12.1	KEPT	Retune the base tip and exponent under the shifted-bump profile, moving to a 200 nm tip and exponent 2.20.
+10	0.847204	10.5	KEPT	Add a small early negative bump centered at 20 percent of the taper to slightly delay the first width growth under the corrected profile.

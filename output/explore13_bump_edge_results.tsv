@@ -1,0 +1,6 @@
+rank	name	metric
+1	bedge_mn0.40_lp0.24	0.839232379
+2	bedge_mn0.40_lp0.14	0.838874903
+3	bedge_mn0.46_lp0.14	0.837497096
+4	bedge_mn0.46_lp0.24	0.837075973
+5	bedge_mn0.52_lp0.14	0.833307337

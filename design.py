@@ -1,159 +1,116 @@
+"""design.py — PN junction design file.  THE AGENT MODIFIES THIS FILE.
+
+Current device: Silicon lateral PN phase shifter (SISCAP-style constant doping).
+Platform     : cSi on SiO₂, 220 nm Si, 90 nm slab, 1.31 µm O-band.
+Metric       : FOM = -VπL_dB - λ_C·C_norm - λ_α·α_norm  (higher = better).
+
+The agent may only edit:
+    - IMPLANTS           (list[DopingRegion])
+    - W_CORE             (rib width, µm, bounded [0.40, 0.70])
+    - V_SWEEP            (reverse-bias points, V)
+
+Keep create_simulation() and evaluate() structurally unchanged — they are
+the harness for simulate.py. If the agent wants to use a non-constant
+topology (U / L / V / graded), it should re-compose IMPLANTS by calling
+`tools.doping_builders.build_*` helpers instead of rewriting create_simulation.
 """
-design.py - Photonic device design file.
-THE AGENT MODIFIES THIS FILE.
+from __future__ import annotations
 
-Current device: 1x2 Power Splitter
-Platform: Silicon photonics, 220nm SOI, 1550nm
-Metric: total transmission power - higher is better
-"""
-
-import numpy as np
-import tidy3d as td
+from tools.doping_builders import DopingRegion, build_lateral_pn
 
 
-# ============================================================
-# Device Parameters
-# ============================================================
-WAVELENGTH = 1.55  # um - C-band center
-FREQUENCY = td.C_0 / WAVELENGTH
-WG_WIDTH = 0.5  # um - single-mode at 1550nm
-WG_HEIGHT = 0.22  # um - standard SOI thickness
-OUTPUT_SEPARATION = 2.0  # um - center-to-center of output waveguides
-TAPER_LENGTH = 10  # um
-BUFFER = 2  # um - padding between structures and simulation boundary
-
-# ============================================================
-# Materials
-# ============================================================
-Si = td.Medium.from_nk(n=3.47, k=0, freq=FREQUENCY)
-SiO2 = td.Medium.from_nk(n=1.44, k=0, freq=FREQUENCY)
+# =========================================================================
+# Device / platform constants  (FIXED — do not edit)
+# =========================================================================
+WAVELENGTH_UM = 1.31
+H_CORE        = 0.220         # silicon rib height  (µm)
+H_SLAB        = 0.090         # slab thickness      (µm)
+W_CLEARANCE   = 2.000         # slab half-extent outside the rib
+W_CONTACT     = 1.000         # contact / side-pad width per side
+OXIDE_TOP     = 1.200         # TOX above slab
+BOX_THICK     = 2.000         # BOX below slab
+# Convention: P contact grounded at 0 V, N contact swept over V_SWEEP.
+# Positive V on the N contact = reverse bias on this PN junction.
+TARGET_BIAS_V = +1.0          # reverse-bias magnitude at which V\u03c0L / C are reported
 
 
-# ============================================================
-# Waveguide structures
-# ============================================================
-input_waveguide = td.Structure(
-    geometry=td.Box.from_bounds(
-        rmin=(-1e3, -WG_WIDTH / 2, -WG_HEIGHT / 2),
-        rmax=(0, WG_WIDTH / 2, WG_HEIGHT / 2),
-    ),
-    medium=Si,
-)
+# =========================================================================
+# Agent-editable knobs
+# =========================================================================
+W_CORE = 0.500                # rib width (µm), allowed [0.40, 0.70]
 
-output_waveguide_upper = td.Structure(
-    geometry=td.Box.from_bounds(
-        rmin=(
-            TAPER_LENGTH,
-            OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
-            -WG_HEIGHT / 2,
-        ),
-        rmax=(1e3, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
-    ),
-    medium=Si,
-)
+# All reverse-bias (positive on N contact, P grounded).
+V_SWEEP: tuple[float, ...] = (0.0, 0.5, 1.0, 1.5, 2.0)
 
-output_waveguide_lower = td.Structure(
-    geometry=td.Box.from_bounds(
-        rmin=(
-            TAPER_LENGTH,
-            -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2,
-            -WG_HEIGHT / 2,
-        ),
-        rmax=(1e3, -OUTPUT_SEPARATION / 2 + WG_WIDTH / 2, WG_HEIGHT / 2),
-    ),
-    medium=Si,
+# Constant-doping baseline (matches SISCAP TWModulator_Simple_latest.ipynb).
+# To switch topologies the agent replaces this list — e.g.:
+#
+#   from tools.doping_builders import build_ushape_pn   # later when added
+#   IMPLANTS = build_ushape_pn(...)
+#
+IMPLANTS: list[DopingRegion] = build_lateral_pn(
+    Np_core=5e17, Nn_core=3e17,
+    Np_plus=2e18, Nn_plus=3e18,
+    Np_pp=1e20,   Nn_pp=1e20,
+    y_junction=0.0,
+    wp_plus=0.12, wn_plus=0.14,
+    h_core=H_CORE, h_slab=H_SLAB, w_core=W_CORE,
+    w_clearance=W_CLEARANCE, w_contact=W_CONTACT,
 )
 
 
-# ============================================================
-# Source
-# ============================================================
-source = td.ModeSource(
-    center=(-BUFFER / 2, 0, 0),
-    size=(0, WG_WIDTH * 4, WG_HEIGHT * 6),
-    source_time=td.GaussianPulse(freq0=FREQUENCY, fwidth=FREQUENCY / 20),
-    direction="+",
-    mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
-    mode_index=0,
-    name="input_mode",
-)
-
-
-# ============================================================
-# Monitors
-# ============================================================
-monitors = [
-    td.ModeMonitor(
-        center=(TAPER_LENGTH + BUFFER / 2, OUTPUT_SEPARATION / 2, 0),
-        size=source.size,
-        freqs=[FREQUENCY],
-        mode_spec=td.ModeSpec(num_modes=1, target_neff=3.47),
-        name="mode",
-    ),
-    # Field profile for visualization
-    td.FieldMonitor(
-        size=(td.inf, td.inf, 0),
-        freqs=[FREQUENCY],
-        name="field_xy",
-    ),
-]
-
-
-# ============================================================
-# Simulation domain
-# ============================================================
-sim_box = td.Box.from_bounds(
-    rmin=(-BUFFER, -OUTPUT_SEPARATION / 2 - BUFFER, -1),
-    rmax=(TAPER_LENGTH + BUFFER, OUTPUT_SEPARATION / 2 + BUFFER, 1),
-)
-
-
-def create_simulation() -> td.Simulation:
-    """Build and return a Tidy3D simulation of the 1x2 splitter."""
-
-    # Splitting junction — linear taper from input width to full output span
-    junction_vertices = [
-        (0, -WG_WIDTH / 2),
-        (0, WG_WIDTH / 2),
-        (TAPER_LENGTH, OUTPUT_SEPARATION / 2 + WG_WIDTH / 2),
-        (TAPER_LENGTH, -OUTPUT_SEPARATION / 2 - WG_WIDTH / 2),
-    ]
-    junction = td.Structure(
-        geometry=td.PolySlab(
-            vertices=junction_vertices,
-            slab_bounds=(-WG_HEIGHT / 2, WG_HEIGHT / 2),
-            axis=2,
-        ),
-        medium=Si,
+# =========================================================================
+# Shared geometry dict — re-used by preview.py, drc.py, simulate.py
+# =========================================================================
+def geometry() -> dict:
+    return dict(
+        h_core=H_CORE, h_slab=H_SLAB, w_core=W_CORE,
+        w_clearance=W_CLEARANCE, w_contact=W_CONTACT,
     )
 
-    structures = [
-        input_waveguide,
-        junction,
-        output_waveguide_upper,
-        output_waveguide_lower,
-    ]
 
-    # --- Simulation ---
-    sim = td.Simulation(
-        center=sim_box.center,
-        size=sim_box.size,
-        grid_spec=td.GridSpec.auto(min_steps_per_wvl=20, wavelength=WAVELENGTH),
-        structures=structures,
-        sources=[source],
-        monitors=monitors,
-        run_time=2e-12,
-        medium=SiO2,  # cladding / background
-        symmetry=(0, -1, 1),
+# =========================================================================
+# create_simulation — builds the Tidy3D CHARGE simulation from IMPLANTS.
+# (Kept skeletal here on purpose: simulate.py is the actual driver.)
+# =========================================================================
+def create_simulation():
+    """Return (charge_sim, handles) with the current IMPLANTS wired in.
+
+    Imports Tidy3D lazily so that preview.py / drc.py can import this
+    module without needing a working tidy3d install for pure-geometry
+    inspection.
+    """
+    from tools.charge_sim import build_charge_simulation    # local import
+    return build_charge_simulation(
+        implants=IMPLANTS,
+        geometry=geometry(),
+        v_sweep=V_SWEEP,
+        wavelength_um=WAVELENGTH_UM,
     )
 
-    return sim
+
+def evaluate(sim_data, mode_results=None):
+    """Compute the FOM from CHARGE + (optionally) mode-solver results.
+
+    Parameters
+    ----------
+    sim_data       : HeatChargeSimulationData
+    mode_results   : dict {"V": ndarray, "neff": ndarray complex} or None
+
+    Returns
+    -------
+    dict with keys {FOM, VpiL_Vcm, C_pF_mm, loss_dB_cm}. simulate.py
+    prints these as `metric: ...` so the agent can grep them out of the
+    run log.
+    """
+    from tools.fom import compute_fom
+    return compute_fom(sim_data, mode_results, target_bias_v=TARGET_BIAS_V,
+                       wavelength_um=WAVELENGTH_UM)
 
 
-def evaluate(sim_data):
-    """Evaluate the total mode transmission of the 1x2 splitter."""
-
-    amp = sim_data["mode"].amps.sel(mode_index=0, direction="+").values
-    T = np.abs(amp) ** 2
-
-    return 2 * T[0]
+def snapshot_header() -> str:
+    return (
+        f"# W_CORE={W_CORE}  H_CORE={H_CORE}  H_SLAB={H_SLAB}\n"
+        f"# V_SWEEP={V_SWEEP}  TARGET_BIAS_V={TARGET_BIAS_V}\n"
+        f"# n_regions={len(IMPLANTS)}"
+    )

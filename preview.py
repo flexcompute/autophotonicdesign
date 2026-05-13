@@ -1,56 +1,56 @@
-"""
-preview.py — Generate geometry preview plot before running a simulation.
+"""preview.py — Geometric / visual sanity check before any cloud call.
 
-DO NOT MODIFY. The agent should only modify design.py.
+Reads `design.IMPLANTS` + `design.geometry()`, renders a 2-panel figure
+(net doping log-scale + labeled implant boxes), and saves it to
+`output/preview.png`. Optionally archives a per-experiment copy to
+`output/previews/experiment_N.png`.
 
 Usage:
-    python preview.py [experiment_number]
-
-Outputs:
-    output/preview.png — always overwritten (agent inspects this)
-    output/previews/experiment N.png — archived copy if experiment number given
+    python preview.py          # no archive
+    python preview.py 7        # archive as experiment_7.png
 """
+from __future__ import annotations
 
+import os
 import sys
 
 import matplotlib
-
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from design import create_simulation
+from design import IMPLANTS, V_SWEEP, geometry, snapshot_header
+from tools.viz import preview_figure
 
 
 def main():
-    sim = create_simulation()
+    geom = geometry()
+    title = (
+        f"PN doping preview  —  W_CORE={geom['w_core']:.3f} µm, "
+        f"{len(IMPLANTS)} regions, V_SWEEP={V_SWEEP}"
+    )
+    fig = preview_figure(IMPLANTS, geom, title=title)
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sim.scene.plot_structures_eps(z=0, ax=ax)
-    sim.plot_sources(z=0, ax=ax)
-    sim.plot_monitors(z=0.001, ax=ax)
-    ax.set_title("Top view (z = 0)")
-    ax.set_aspect("equal")
-    plt.tight_layout()
+    os.makedirs("output", exist_ok=True)
+    out_path = "output/preview.png"
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    print(f"Saved {out_path}")
 
-    # Always save to the standard location
-    plt.savefig("output/preview.png", dpi=150, bbox_inches="tight")
-    print("Saved output/preview.png")
-
-    # Archive a copy if experiment number is provided
     if len(sys.argv) > 1:
-        import os
-
         os.makedirs("output/previews", exist_ok=True)
-        name = f"output/previews/experiment {sys.argv[1]}.png"
-        plt.savefig(name, dpi=300, bbox_inches="tight")
-        print(f"Saved {name}")
+        archive = f"output/previews/experiment_{sys.argv[1]}.png"
+        fig.savefig(archive, dpi=200, bbox_inches="tight")
+        print(f"Saved {archive}")
 
-    plt.close()
+    plt.close(fig)
 
-    print(f"  Simulation domain: {tuple(round(s, 2) for s in sim.size)} μm")
-    print(f"  Structures: {len(sim.structures)}")
-    print(f"  Sources: {len(sim.sources)}")
-    print(f"  Monitors: {len(sim.monitors)}")
+    print("\n" + snapshot_header())
+    print(f"\n  {'region':18s} {'kind':9s} {'N (cm⁻³)':>10s}  "
+          f"{'y (µm)':>16s}  {'z (µm)':>16s}")
+    print("  " + "-" * 74)
+    for r in IMPLANTS:
+        print(f"  {r.name:18s} {r.kind:9s} {r.concentration:10.2e}  "
+              f"({r.ymin:+6.3f},{r.ymax:+6.3f})  "
+              f"({r.zmin:+6.3f},{r.zmax:+6.3f})")
 
 
 if __name__ == "__main__":

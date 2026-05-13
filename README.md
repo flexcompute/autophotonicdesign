@@ -1,91 +1,83 @@
-# Photonic Device Auto-Design Agent
+# AutoPhotonicDesign · RF Transmission-Lines Branch
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+An autonomous design agent for an RF coplanar-waveguide (CPW) electrode
+driving a thin-film lithium tantalate (LTOI300) Mach–Zehnder modulator.
+Built on the same loop as [`main`](https://github.com/flexcompute/autophotonicdesign),
+but the physics solver is Tidy3D's full-wave RF / `TerminalComponentModeler`
+and the figure of merit is over three coupled microwave properties.
 
-![schematic](schematic.svg)
+## What it does
 
-## How It Works
+The agent edits `design.py` to vary the T-rail geometry, CPW dimensions,
+metal thickness, and dielectric stack of a segmented coplanar waveguide.
+Each iteration submits a 3D Tidy3D RF simulation, extracts the S-matrix at
+two wave ports, derives the transmission-line parameters from the S
+parameters, and jointly drives:
 
-Before the loop, the agent does a one-time **literature review** of the
-target device class — common topologies, underlying physics, state-of-the-art
-metrics — and captures it in `output/principles.md` as a stable design
-reference.
+- `α₀` — skin-effect-dominated microwave loss in dB/cm/√GHz (lower is better)
+- `Re(Z₀)` — characteristic impedance toward 50 Ω
+- `n_eff` — RF effective index toward 2.20 (matches TFLT TE optical group index at 1.31 µm)
 
-Each iteration then runs through a fixed loop:
+After ~40 iterations across topology families (plain T-rail, asym-T,
+wide-cap T, T+U, half-T) the agent maps the loss / impedance / index
+frontier in about an hour of cloud time.
+
+## Layout
 
 ```
-Explore → Design → Verify (DRC + preview) → Simulate → Log (keep/discard)
+.
+├── program.md          # Agent brief: device, constraints, loop rules
+├── design.py           # THE ONLY FILE THE AGENT MODIFIES
+├── simulate.py         # 3D RF FDTD batch + S-matrix to (α, Z₀, n_eff) extractor
+├── preview.py          # 2D top-down + cross-section, free
+├── drc.py              # T-rail geometric / process rules
+├── schematic.svg       # Loop diagram
+├── tools/              # Load-bearing harness modules
+│   ├── journal.py          # output/journal.md + results.tsv manager
+│   ├── dashboard.py        # output/dashboard.html builder
+│   ├── evolution.py        # Iteration GIF builder
+│   └── build_blog.py       # Optional blog renderer
+├── output/             # Auto-generated; .gitignored
+└── README.md
 ```
 
-Long-term memory spans two files: `output/principles.md` holds the literature
-review, and `output/journal.md` logs each experiment's hypothesis and lesson.
-Together they let the agent learn from both successes and failures and avoid
-repeating dead ends. The human's job is to define the problem (device type,
-constraints, target metric) in `program.md`; the agent does the engineering.
+## Difference from the main (passive) template
 
-## Example Designs
+This branch does **not** use `orchestrate.py`. `simulate.py` self-manages
+bookkeeping (auto-archives each experiment to `output/experiments/NNNN/`,
+appends to `output/journal.md` / `output/results.tsv`, promotes best
+designs, regenerates the dashboard). The agent contract is otherwise
+identical: edit `design.py`, re-run `simulate.py`.
 
-See a few examples of what the AI photonic designer has designed:
-
-- [`1x2splitter`](../../tree/1x2splitter)
-- [`taper`](../../tree/taper)
-- [`crossing`](../../tree/crossing)
-
-
-## Project Structure
-
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `orchestrate.py` | Post-simulation bookkeeping: parses run log, updates TSV/journal, handles keep/discard |
-| `output/` | All generated files (principles, logs, plots, journal, best design) |
-
-## Setup
+## Quickstart
 
 ```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
-```
+# 1. Install dependencies (Python 3.10+)
+pip install tidy3d klayout numpy matplotlib
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+# 2. Configure Tidy3D (one-time, RF-enabled account required)
+tidy3d configure --apikey=<your-key>
 
-## Running
+# 3. Verify the geometry renders cleanly (no cloud spend)
+python preview.py
+python drc.py
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+# 4. Run one full experiment (≈12 min, ~$ in FlexCredit)
+python simulate.py
 
-```bash
+# 5. Hand off to the agent
 claude "Follow the instructions in program.md and start designing!"
 ```
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+## Iter-1 baseline
 
-## Customizing for a Different Device
+`design.py` ships with the plain T-rail CPW baseline. On the GPU cloud you
+should reproduce: FOM ≈ −1.21, α₀ ≈ 0.66 dB/cm/√GHz, α @ 40 GHz ≈ 2.82 dB/cm,
+Re(Z₀) @ 40 GHz ≈ 39.5 Ω, n_eff @ 40 GHz ≈ 2.02. The agent's job is to pull
+Z₀ up to 50 Ω, n_eff up to 2.20, and α₀ down — without breaking the others.
 
-To adapt this framework to a new photonic device:
+## Citation
 
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`,
-   `orchestrate.py`) is device-agnostic and does not need to change.
-
-## Credits
-
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+If you use this in published work, please cite Flexcompute's
+[Agentic Photonic Design for RF Transmission Modulators](https://hs.flexcompute.com/blog/rf-transmission-modulators)
+blog post.

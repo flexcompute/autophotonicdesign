@@ -1,141 +1,376 @@
-# Photonic Device Auto-Design Agent
+# Segmented-CPW Auto-Design Agent
 
-You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop.
+You are an autonomous RF/photonics design agent. You iteratively improve a
+T-rail-loaded coplanar waveguide (CPW) electrode for a thin-film lithium
+tantalate (LTOI300) Mach–Zehnder modulator by editing `design.py`, running a
+3-D Tidy3D `TerminalComponentModeler` simulation, extracting transmission-line
+parameters from the S-matrix, and keeping changes that improve the FOM. You
+run **50 experiments** in a loop — never stopping, never asking the human
+for input.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Your task: **jointly minimize microwave loss `α₀` (dB/cm/√GHz), match the
+characteristic impedance `Z₀` to 50 Ω, and pull the RF effective index
+`n_eff` up to 2.20** (the optical group index of TFLT TE @1310 nm). The
+baseline `design.py` shipped on this branch is the iteration-1 T-rail CPW
+design — it is the starting point for the agent.
 
 ---
 
 ## 1. Platform Reference
 
-- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
-- **Operating wavelength:** 1550 nm (telecom C-band)
+- **Material stack** (top → bottom):
+  - Air
+  - Au CPW + T-rails (`TM` thick, gold conductivity 41 S/μm)
+  - SiO₂ cladding (`TSIO21` above LTOI; baseline 200 nm)
+  - TFLT (LTOI300) ridge: 600 nm thick, 300 nm slab, 30° sidewall
+  - SiO₂ BOX (2 μm)
+  - Quartz substrate (εᵣ = 4.5)
+- **Operating band**: 1–65 GHz (FDTD simulated). Headline metrics reported
+  at `F_REF = 40 GHz` (clean of band-edge port-mode artifacts).
+- **Optical waveguide** (frozen): 1.0 μm rib width, 600 nm core / 300 nm
+  slab, anisotropic LiTaO₃ (εxx = 27.9 e-, εyy = εzz = 44 o-).
+- **Operating point** (LXT collaboration): 67 GHz; n_eff target = 2.20
+  matches optical group index of TE @1310 nm.
+
+Baseline (experiment 0001):
+
+| Metric | Value | Target |
+|---|---|---|
+| FOM | −1.12 | maximize |
+| α₀ (dB/cm/√GHz) | 0.573 | minimize |
+| α(40 GHz) (dB/cm) | 2.82 | minimize |
+| Re(Z₀)(40 GHz) (Ω) | 39.4 | 50 |
+| n_eff(40 GHz) | 2.02 | 2.20 |
 
 ---
 
 ## 2. Project Files
 
-You edit only `create_simulation()` in `design.py`. The harness scripts (`preview.py`, `drc.py`, `simulate.py`, `orchestrate.py`) are invoked by the steps below — don't modify them. Everything under `output/` is managed for you; read `principles.md`, `journal.md`, `results.tsv`, and the PNG artifacts, but treat `best_design.py` and `best_metric.txt` as harness state.
+| File | Role | Editable? |
+|---|---|---|
+| `program.md` | Agent instructions (this file) | No |
+| `design.py` | T-rail + CPW geometry + materials + FOM. **Edit only the parameters in the AGENT-TUNABLE block at the top.** | **Yes** |
+| `preview.py` | 4-panel pre-sim view → `output/preview.png` | No |
+| `drc.py` | Geometric + process DRC → pass/fail | No |
+| `simulate.py` | Submits 3-D TCM, extracts S-params, computes FOM, archives the run | No |
+| `tools/journal.py`, `tools/dashboard.py` | Logging + dashboard | No |
+| `output/best_design.py` | Snapshot of best-FOM design | Auto |
+| `output/results.tsv` | Per-experiment metric log | Auto |
+| `output/journal.md` | Long-term reasoning log | **Yes — fill in stubs** |
+| `output/dashboard.html` | Static dashboard (open in browser) | Auto |
+| `output/experiments/NNNN/` | Per-experiment archive (frozen design.py + plots + results.json) | Auto |
 
 ---
 
 ## 3. Design Constraints
 
-### Device geometry
+### Process-fixed (DO NOT change in `design.py`)
 
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
-- **Y-symmetry:** The device must be symmetric about y = 0.
-- **Minimum feature size:** 150 nm for all gaps, widths, and radii.
+- TFLT thicknesses: `TLN0 = 0.600`, `TLN1 = 0.300` μm.
+- Optical rib: `W0 = 1.0` μm, `THETA_LN_DEG = 30`.
+- TFLT permittivities: `EPS_LN_O = 44`, `EPS_LN_EO = 27.9`.
+- Quartz substrate: `EPS_QZ = 4.5`.
+- Frequency band: `F_MIN = 1e9`, `F_MAX = 65e9`, `F_REF = 40e9`,
+  `F_FIT_MIN/MAX = 5–50 GHz`.
+- FOM weights and target values (`λ_Z = 5`, `λ_n = 50`, `target_Z = 50 Ω`,
+  `target_n = 2.20`).
+- BOX thickness `TSIO20 = 2.0` μm.
+- Gold conductivity `SIGMA_AU_S_per_um = 41.0`.
 
-### Code rules
+### Fab rules (enforced by `drc.py`; failure aborts simulate)
 
-- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`). `evaluate()` may return a dict or a scalar (higher = better).
-- No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
+- **Minimum metal feature & spacing: 100 nm.** Applies to `T_S`, `T_T`,
+  `T_H`, `T_R`, `T_C`, `G`, `WS`, `WG`, and the residual ground-rail
+  width `WG − (T_S + T_H)`.
+- **Minimum metal thickness:** `TM ≥ 0.100` μm.
+- **Cladding above LTOI can only INCREASE** from baseline:
+  `TSIO21 ≥ 0.200` μm.
+- T_R must fit inside the period: `T_R ≤ P_T − 0.10`, where
+  `P_T = T_R + T_C`.
+- `N_PERIODS ≥ 5` so the segmented section is long enough for reliable
+  phase-slope extraction.
+
+### Editable knobs (in `design.py`'s AGENT-TUNABLE block)
+
+| Knob | Baseline | Role |
+|---|---|---|
+| `T_S` | 2.0 μm | T-top width along propagation |
+| `T_R` | 45.0 μm | T-top length transverse to propagation |
+| `T_H` | 6.0 μm | T-neck length (how far the T extends into the gap) |
+| `T_T` | 2.0 μm | T-neck width along propagation |
+| `T_C` | 5.0 μm | gap between adjacent T's along propagation |
+| `G` | 5.0 μm | residual CPW gap (where the rib waveguide lives) |
+| `WS` | 100.0 μm | signal trace width |
+| `WG` | 300.0 μm | ground trace width |
+| `TM` | 1.0 μm | metal thickness |
+| `TSIO21` | 0.2 μm | cladding above LTOI (only ↑ from baseline) |
+| `N_PERIODS` | 20 | number of T-rail unit cells (cost knob — agent may shrink to 10 for exploration) |
+
+The **agent may not edit any other constant or function** in `design.py`.
 
 ---
 
 ## 4. Experiment Loop
 
-**Before the first experiment:**
-
-1. Run `python orchestrate.py init` once. This creates `output/`, writes the `results.tsv` header, and seeds `journal.md`. Safe to re-run — it's idempotent.
-2. Do a **literature review** to establish design principles. Search for papers, tutorials, and design guides for the target device class. Cover common topologies, underlying physics, typical dimensions and analytical design formulas, and state-of-the-art metrics for comparison. Fully understand the design steps for each approach. Summarize the findings in `output/principles.md` — concise, structured by topology or theme. This becomes your stable reference and should guide topology choices throughout all 50 experiments.
-
-Repeat for experiments 1 through 50:
+Repeat for experiments 2 through 50 (1 = frozen baseline).
 
 ### Step 1 — Review
 
-Read `design.py`, `output/principles.md`, `output/results.tsv`, and `output/journal.md`. Ground the next move in the literature principles and the lessons of previous experiments, including discarded ones.
+Read `output/results.tsv`, `output/journal.md`, and the last 3 experiment
+folders' `results.json`. Note:
+- Current best FOM and which knobs produced it.
+- Which knob moves have been tried and their sign of effect on each of
+  (α₀, Z₀, n_eff).
+- Which ones are *unexplored* — those are usually the highest-information
+  next move.
 
 ### Step 2 — Hypothesize
 
-Propose one specific design change. Explain why you expect the change to help.
+Propose ONE specific knob change. State the predicted direction of effect
+on each of (α₀, Z₀, n_eff). Cite the journal entry it builds on.
 
-### Step 3 — Explore (usually needed)
+Examples:
+- *"Raise `T_H` from 6 → 8 μm: more capacitive loading per cell → expect
+  n_eff ↑ and Z₀ ↓; α₀ slight ↑ (more current crowding at the neck).
+  Builds on exp 4 which showed `T_R` already saturated."*
+- *"Drop `G` from 5 → 3 μm: smaller residual gap → much higher C/μm →
+  n_eff ↑ but Z₀ ↓ steeply. Compensate by widening `WS` next iteration."*
+- *"Raise `TM` from 1 → 2 μm: thicker metal → α₀ ↓ (more conductor
+  cross-section), n_eff and Z₀ unchanged to first order."*
 
-When you propose a new topology, sweep its key parameters (lengths, widths, radii) here to pick good values before committing. The 30-FDTD exploration budget is separate from the 50-experiment budget — use it. See [Section 5: Exploration](#5-exploration).
+### Step 3 — Explore (optional, free)
+
+Cheap analysis before paying for a 3-D run:
+- **Web search** — papers on T-rail / capacitively-loaded slow-wave CPW,
+  especially for TFLN/TFLT operating bands. Look up `Z₀(L,C)`, slow-wave
+  factor, conductor-loss formulas for CPW.
+- **Analytical estimates** —
+  - CPW `Z₀ ≈ (η₀ / √εᵣ_eff) · K(k')/K(k) / 4`, with `k = a/b` and
+    `a, b` the inner/outer half-widths.
+  - Slow-wave factor `(n_eff_loaded / n_eff_unloaded)² = C_loaded / C_unloaded`.
+  - Skin-effect resistance `R_s = √(πfμ₀/σ)`.
+- **2-D mode solver on the conventional CPW** — `python simulate.py
+  --mode2d` is ~$0.02 / 30 s and tells you how the **host** CPW responds
+  to changes in `G/WS/WG/TM/TSIO21`.
 
 ### Step 4 — Edit
 
-Apply the new design to `design.py`.
+Apply the change to `design.py`'s AGENT-TUNABLE block.
 
-### Step 5 — Verify geometry
+### Step 5 — Preview
 
-Before spending simulation credits, run the automated fabrication check first, then inspect visually.
-
-1. Run `python drc.py`.
-   - **DRC FAILED** → inspect `output/drc.png` (red = width, blue = spacing). Fix `design.py` and re-run `drc.py`. Do NOT proceed until it passes.
-2. **DRC PASSED** → run `python preview.py N` (N = experiment number) and inspect `output/preview.png` against the [Preview Checklist](#6-preview-checklist). If anything looks wrong, fix `design.py` and re-run both `drc.py` and `preview.py`.
-
-### Step 6 — Simulate
-
-Run `python simulate.py > output/run.log 2>&1`. If it crashes, check `tail -n 50 output/run.log`:
-
-- **Typo / import error** — fix and retry this step.
-- **Divergence** — reduce `run_time` in `create_simulation()` or check for geometry overlaps; retry.
-- **Tidy3D server error** — wait 30 s and retry once; if it still fails, proceed to Step 7.
-- **Fundamentally broken idea** — proceed to Step 7 with a `--lesson` describing the crash; `orchestrate.py` auto-reverts.
-
-### Step 7 — Analyze and log
-
-If the simulation completed, inspect `output/field.png` (Ey real and |E|) — your observations feed the `--lesson`. Then run:
-
-```bash
-python orchestrate.py log N \
-    --hypothesis "What you changed and why (one line)" \
-    --lesson    "What you learned from the result (one line)"
+```
+python preview.py
 ```
 
-`orchestrate.py` parses `output/run.log`, appends the TSV row and journal entry, compares metric vs. previous best, and either snapshots `design.py` as the new best or reverts it from `output/best_design.py`. It prints a one-line verdict (`KEPT` / `DISCARDED` / `CRASH`) — read it before starting the next experiment.
+Inspect `output/preview.png`:
+- All four T's per row visible? Rib waveguide visible in the active gap?
+- Top view: are the T-rails the right shape (no clipping, no overlapping)?
+- Cross-section: SiO₂ cladding above LTOI, metal floating on top? No
+  geometry leaking into the PML region?
+
+If anything looks wrong, fix and re-preview before paying for a sim.
+
+### Step 6 — DRC
+
+```
+python drc.py
+```
+
+- DRC PASSED → simulate.
+- DRC FAILED → fix the offending knob, re-preview, re-DRC. **Do not
+  submit a sim until DRC passes.**
+
+### Step 7 — Simulate
+
+```
+python simulate.py --description "<one-sentence summary>"
+```
+
+This:
+1. Re-renders `output/preview.png`.
+2. Submits the TCM (≈ 8 min wall time, ≈ 3.5 FlexCredits at the baseline
+   `N_PERIODS = 20` and `MIN_STEPS_PER_WVL = 12`).
+3. Extracts α(f), n_eff(f), Z₀(f) from S-parameters via the uniform-line
+   method (`tools/_line_extract_from_S21` for α/n_eff, NRW guarded for
+   Z₀).
+4. Fits `α₀` over 5–50 GHz.
+5. Computes the scalar FOM.
+6. Archives the run into `output/experiments/NNNN/` (frozen `design.py`,
+   `preview.png`, `segmented_summary.png`, `results.json`).
+7. Appends one row to `output/results.tsv`.
+8. Appends a journal stub to `output/journal.md` for you to fill in.
+9. If FOM improved over the previous best, copies `design.py` to
+   `output/best_design.py`.
+10. Refreshes `output/dashboard.html`.
+
+### Step 8 — Analyze
+
+Inspect `output/segmented_summary.png`:
+- |S11|, |S21| traces clean? Bell curve for |S11|? |S21| smoothly above
+  ~0.85? If |S21|>1 across most of the band, something is broken.
+- α(f) curve smooth? Skin-loss fit (red dashed) tracks well in 5–50 GHz?
+- n_eff(f) flat from ~10 GHz onward (slow-wave plateau)?
+- Re(Z₀)(f) flat in mid-band? Where does it cross 50 Ω if at all?
+
+### Step 9 — Log
+
+Open `output/journal.md` and fill in the latest stub:
+- **Hypothesis**: what you predicted.
+- **Result**: actual numbers.
+- **vs previous best**: ΔFOM, sign of each knob's effect (was the
+  prediction right?).
+- **Kept or discarded**: KEPT if FOM improved, DISCARDED otherwise.
+- **Lesson**: ONE sentence — be honest about surprises.
+
+### Step 10 — Decide
+
+The framework already promotes the new design to `best_design.py` if FOM
+improved. If FOM was worse or equal, **revert**:
+
+```
+python -c "from tools.journal import revert_to_best; revert_to_best()"
+```
+
+This copies `output/best_design.py` back over `design.py`, ready for the
+next iteration.
 
 ### After 50 experiments
 
 Print a summary:
-
-- Best metric and which experiment produced it.
-- The design strategy that worked best.
-- Suggestions for further improvement.
-
----
-
-## 5. Exploration
-
-Use exploration to fine-tune parameter values (lengths, widths, radii, etc.) for a given topology. The 50-experiment budget is for topology-level moves; numerical tuning lives here, where you can sweep cheaply. Write and run Python scripts to inform your design choices before committing.
-
-### Available tools
-
-- **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec`, and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
-- **Parameter sweeps (primary tool for fine tuning)** — Sweep each geometry parameter over a range using `td.web.Batch` or a loop and pick the best value. This is how you tune lengths, widths, and radii — not by burning sequential experiments each tweaking one number.
-- **Advanced optimization** — When grid sweeps scale poorly (high-dimensional or multi-modal parameter spaces), use smarter algorithms such as **Bayesian optimization**, **particle swarm**, or **adjoint inverse design**.
-- **Analytical calculations** — For example MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
-
-### Rules
-
-- Maximum **30 FDTD simulations** per experiment's exploration stage (sweeps and batches included, summed across any scripts you run). Mode solving and analytical calculations are unlimited.
-- Write scripts to a temp file (e.g., `output/explore.py`), run, and read output.
-- Exploration does not count toward the 50-experiment budget.
+- Best FOM and which experiment produced it.
+- Best (α₀, Z₀, n_eff) point on the tradeoff curve.
+- Topology family that worked best.
+- Suggestions for further improvement (e.g., asymmetric T-rails, defected
+  ground, multi-period stacking).
 
 ---
 
-## 6. Preview Checklist
+## 5. Design principles for ultra-low-loss, velocity-matched CPW
 
-**If you see ANY visual anomaly (gap, misalignment, unexpected color) in the preview, assume it is real until you have proven otherwise with a diagnostic script. NEVER dismiss an anomaly as a "rendering artifact."**
+Use these as priors when forming hypotheses. They are NOT laws — verify
+each in the data.
 
-When inspecting `output/preview.png`, verify:
+### How each knob moves each metric (first-order)
 
-1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
-5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ half wavelength between device features and the simulation-domain boundary.
-6. **Domain size** — Large enough for the full device with buffer.
+| Knob ↑ | α₀ | Z₀ | n_eff |
+|---|---|---|---|
+| `T_R` (T-top length) | ≈ ↓ (more conductor area) | ↓ | ↑ |
+| `T_S` (T-top width) | ↓ slightly | ↓ slightly | ↑ slightly |
+| `T_H` (neck extension) | ↑ (current crowding) | ↓ | ↑ ↑ (most leverage) |
+| `T_T` (neck width) | ↓ (better DC return) | ≈ | ≈ |
+| `T_C` (gap between Ts) | ≈ | ↑ | ↓ (fewer Ts/length) |
+| `G` (residual gap) | slight ↑ | ↑ | ↓ (less host C) |
+| `WS` (signal width) | ↓ | ↓ | slight ↓ |
+| `WG` (ground width) | ↓ slight | slight ↑ | ≈ |
+| `TM` (metal thickness) | ↓↓ (skin-effect) | ≈ | ≈ |
+| `TSIO21` (cladding gap) | ≈ | ↑ slightly | ↓ slightly (less LTOI overlap) |
+
+### Strategy
+
+The baseline already has reasonable α₀ (0.57) and reasonable Z₀ (39 Ω);
+**the biggest opportunity is to push n_eff up by 0.18 toward 2.20 without
+crashing Z₀**. T-rails are capacitive loading: more loading → higher
+n_eff but lower Z₀. To raise BOTH n_eff and Z₀ you need to add **inductance
+preferentially** — that's what T-neck shape, ground-rail patterning, and
+metal thickness can do.
+
+Suggested phases (you may deviate when the data tells you to):
+
+- **Phase 1, exps 2–10 — Establish gradients.** One-knob-at-a-time
+  perturbations (±25 %) for `T_R`, `T_H`, `T_C`, `G`, `TM`. Build a
+  mental model of the response surface from the data.
+- **Phase 2, exps 11–20 — Push n_eff toward 2.20.** Increase loading via
+  combinations of (`T_R ↑`, `T_H ↑`, `T_C ↓`). Watch Z₀; if it drops
+  below ~30 Ω the FOM penalty dominates.
+- **Phase 3, exps 21–30 — Recover Z₀ to 50 Ω.** Add inductance:
+  thicker metal (`TM`), narrower signal (`WS`), wider gap (`G` ↑) — the
+  last hurts n_eff so this is a 2-D search.
+- **Phase 4, exps 31–40 — Reduce α₀.** Thicker metal, wider T-tops, look
+  at where the surface current peaks in the field plot. Verify the
+  α-vs-n_eff Pareto on the dashboard is moving in the right direction.
+- **Phase 5, exps 41–50 — Best-of-breed fine tuning.** Small (±5 %) sweeps
+  on the best-FOM design; explore one or two qualitatively different
+  topologies (e.g., very thin metal but very wide T-tops; or large
+  `TSIO21` to shift n_eff downward & let `T_H` push it back up).
+
+### Cost control
+
+A baseline 3-D run is ~8 min wall and ~3.5 FlexCredits. To explore more
+cheaply during Phase 1, you may temporarily set `N_PERIODS = 10` (cuts
+sim length in half → ~half the cost). Restore to 20 before logging the
+final-best design so the headline numbers are comparable to the baseline.
 
 ---
 
-## 7. Strategy Tips
+## 6. Preview / DRC checklist
 
-- **Experiments = topology moves. Exploration = parameter tuning.** Use each of your 50 experiment slots for a meaningfully different shape, junction, or device class. Numerical tuning (lengths, widths, radii) happens in Step 3 via parameter sweeps — not by burning experiments each tweaking one number.
-- **Coarse before fine.** Within a sweep, run a coarse grid before refining around the best point.
-- **Switch topology when stuck.** If the current topology plateaus after a sweep, try a fundamentally different approach. When you do, manually append a phase header to `journal.md` (e.g., `# Phase 2: MMI Splitter`).
-- **Be honest in lessons.** "Expected X but got Y because Z" is the most valuable kind of journal entry — include it for discarded and crashed experiments too.
+Run preview.py + drc.py BEFORE every simulate.py. Fix every visual
+anomaly before paying for a sim.
+
+1. **All structures present** — top view shows the segmented section
+   between conventional CPW input/output pads; no clipping at edges.
+2. **T-rails in pairs** — 4 T's per row (left-ground, signal-left,
+   signal-right, right-ground anchors), `N_PERIODS+1` rows.
+3. **Rib waveguide visible** in the active gap (cross-section).
+4. **DRC passes** — geometric + process rules in `drc.py`.
+5. **Source / port amplitudes** — the simulate output should NOT include
+   "Source amplitude is not sufficiently large throughout the specified
+   frequency range" beyond the band edges. If the warning appears in the
+   middle of the band, your geometry is degenerate.
+
+---
+
+## 7. Logging
+
+`output/results.tsv` is structured (one row per experiment). Columns
+include `FOM`, `alpha_0_dBcm_per_sqrtGHz`, `alpha_at_Fref_dBcm`,
+`Z0_real_at_Fref`, `n_eff_at_Fref`, all eleven design knobs, plus
+`wall_time_s` and `description`.
+
+`output/journal.md` is your long-term memory. Entries follow the
+auto-generated stub:
+
+```markdown
+## Experiment N — <topology tag>
+
+- **Timestamp**: ...
+- **Knobs**: T_S=…, T_R=…, ...
+- **Hypothesis**: what you predicted and why
+- **Result**: actual FOM/α₀/Z₀/n_eff
+- **vs previous best**: ΔFOM, signs of effects
+- **Kept or discarded**: KEPT / DISCARDED
+- **Lesson**: one honest sentence (especially when surprised)
+```
+
+---
+
+## 8. Crash handling
+
+| Situation | Action |
+|---|---|
+| `drc.py` fails | Fix the knob, re-preview, retry. Do not edit `drc.py`. |
+| TCM build error | Check the geometry knob you just changed (typo, negative value). |
+| Tidy3D server error | Wait 30 s, retry once. If it still fails, log "crash" status and revert. |
+| Source-amplitude warning across the whole band | Geometry is degenerate (probably zero-area metal somewhere). Revert. |
+| α₀ comes out negative or n_eff > 10 | Extraction unstable — usually means the segmented section is too short or |S21| ≈ 1 everywhere. Increase `N_PERIODS` or revert. |
+| FOM < −10 | Almost certainly an extraction artifact, not a real design. Revert. |
+
+---
+
+## 9. Strategy tips
+
+- **One knob per experiment** in Phase 1 — this is what builds the
+  first-order gradient table that makes Phase 2+ efficient.
+- **Two-knob perturbations** in Phase 2+ — once you know each knob's
+  sign of effect, push two together to compensate (e.g., `T_H ↑` AND
+  `WS ↑` to raise n_eff while holding Z₀).
+- **Don't blow the budget on Phase 1.** Use `N_PERIODS = 10` if needed.
+- **Trust the dashboard.** The α-vs-n_eff scatter is the central plot —
+  the agent's job is to push points down-and-right of the baseline.
+- **Watch the lesson column.** Three "expected n_eff ↑, got n_eff ↓"
+  in a row means your mental model of the response surface is wrong;
+  fix it before continuing.
+
+Good luck. The first experiment is locked in. Open
+`output/dashboard.html` in a browser, then start at experiment 2.

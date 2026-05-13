@@ -1,130 +1,126 @@
 """
-drc.py — Design Rule Check using KLayout.
+drc.py — Geometric design-rule check for the segmented-CPW agent.
 
 DO NOT MODIFY. The agent should only modify design.py.
 
+Two classes of rule:
+
+  • FAB rules — minimum metal feature & spacing of 100 nm anywhere a fab can
+    print. Applies to T-rail dimensions, CPW gap, signal/ground widths,
+    metal thickness.
+
+  • PROCESS rules — TFLT/LTOI thicknesses are FIXED by the platform. The
+    agent must not change `TLN0`, `TLN1`, `W0`, `THETA_LN_DEG`,
+    `EPS_LN_O`, `EPS_LN_EO`. The cladding gap above LTOI (`TSIO21`)
+    can only INCREASE from the baseline 0.20 μm.
+
 Usage:
     python drc.py
-
-Exits 0 if DRC passes, 1 if violations found.
-On failure, saves output/drc.png showing violation locations.
+Exit code 0 = pass, 1 = fail.  Failures print one line per violation.
 """
+from __future__ import annotations
 
 import sys
 
-import klayout.db as pya
+import design
 
-from design import create_simulation
-
-# Must match the constraint in program.md
-MIN_WIDTH_UM = 0.15  # 150 nm minimum width
-MIN_SPACE_UM = 0.15  # 150 nm minimum spacing
-
-GDS_PATH = "output/layout.gds"
-
-
-def run_drc(sim):
-    """Export simulation to GDS and run width/space checks.
-
-    Returns (width_violations, space_violations, layout, dbu).
-    """
-    sim.to_gds_file(fname=GDS_PATH, z=0, gds_cell_name="MAIN")
-
-    layout = pya.Layout()
-    layout.read(GDS_PATH)
-
-    cell = layout.top_cell()
-    dbu = layout.dbu
-
-    min_width_dbu = int(MIN_WIDTH_UM / dbu)
-    min_space_dbu = int(MIN_SPACE_UM / dbu)
-
-    # Merge all layers (all exported structures are silicon)
-    region = pya.Region()
-    for li in layout.layer_indices():
-        region += pya.Region(cell.begin_shapes_rec(li))
-    region.merge()
-
-    width_violations = region.width_check(min_width_dbu)
-    space_violations = region.space_check(min_space_dbu)
-
-    return width_violations, space_violations, dbu
+# ============================================================
+# Constants — kept here so the rules are visible in one place.
+# ============================================================
+MIN_FEATURE_UM = 0.100   # minimum metal feature / spacing
+MIN_TM_UM      = 0.100   # minimum metal thickness
+MIN_TSIO21_UM  = 0.200   # baseline cladding above LTOI; cannot decrease
+PROCESS_FIXED  = {       # name -> (expected_value, tolerance_um)
+    "TLN0":         (0.600, 1e-9),
+    "TLN1":         (0.300, 1e-9),
+    "W0":           (1.000, 1e-9),
+    "THETA_LN_DEG": (30.0,  1e-9),
+    "EPS_LN_O":     (44.0,  1e-9),
+    "EPS_LN_EO":    (27.9,  1e-9),
+    "EPS_QZ":       (4.5,   1e-9),
+}
 
 
-def print_violations(width_violations, space_violations, dbu):
-    """Print violation details in human-readable coordinates (μm)."""
-    for i in range(width_violations.size()):
-        ep = width_violations[i]
-        e1, e2 = ep.first, ep.second
-        print(
-            f"  Width: ({e1.p1.x*dbu:.3f}, {e1.p1.y*dbu:.3f})-"
-            f"({e1.p2.x*dbu:.3f}, {e1.p2.y*dbu:.3f}) <-> "
-            f"({e2.p1.x*dbu:.3f}, {e2.p1.y*dbu:.3f})-"
-            f"({e2.p2.x*dbu:.3f}, {e2.p2.y*dbu:.3f})"
-        )
-    for i in range(space_violations.size()):
-        ep = space_violations[i]
-        e1, e2 = ep.first, ep.second
-        print(
-            f"  Space: ({e1.p1.x*dbu:.3f}, {e1.p1.y*dbu:.3f})-"
-            f"({e1.p2.x*dbu:.3f}, {e1.p2.y*dbu:.3f}) <-> "
-            f"({e2.p1.x*dbu:.3f}, {e2.p1.y*dbu:.3f})-"
-            f"({e2.p2.x*dbu:.3f}, {e2.p2.y*dbu:.3f})"
-        )
+def _check_min(name: str, value: float, threshold: float, unit: str = "μm"):
+    if value < threshold - 1e-9:
+        return [f"FAIL  {name} = {value} {unit} < {threshold} {unit} (min feature)"]
+    return []
 
 
-def save_violation_plot(sim, width_violations, space_violations, dbu):
-    """Save a plot of the device with violation locations marked."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    from matplotlib.collections import LineCollection
+def _check_process_fixed(name: str, value: float, expected: float, tol: float):
+    if abs(value - expected) > tol:
+        return [f"FAIL  {name} = {value} (must be fixed at {expected}; "
+                f"process-determined, not editable)"]
+    return []
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sim.scene.plot_structures_eps(z=0, ax=ax)
-    sim.plot_sources(z=0, ax=ax)
 
-    for violations, color, label in [
-        (width_violations, "red", f"Width violations ({width_violations.size()})"),
-        (space_violations, "blue", f"Space violations ({space_violations.size()})"),
-    ]:
-        lines = []
-        for i in range(violations.size()):
-            ep = violations[i]
-            for edge in [ep.first, ep.second]:
-                x1, y1 = edge.p1.x * dbu, edge.p1.y * dbu
-                x2, y2 = edge.p2.x * dbu, edge.p2.y * dbu
-                lines.append([(x1, y1), (x2, y2)])
-        if lines:
-            lc = LineCollection(lines, colors=color, linewidths=2, label=label)
-            ax.add_collection(lc)
+def run_drc():
+    violations = []
 
-    ax.legend()
-    ax.set_aspect("equal")
-    ax.set_title("DRC Violations")
-    plt.tight_layout()
-    plt.savefig("output/drc.png", dpi=150, bbox_inches="tight")
-    plt.close()
-    print("Saved output/drc.png")
+    # --- 1. Fab rules: minimum 100 nm metal features ---
+    fab_features = {
+        "T_S (T-top width)":          design.T_S,
+        "T_T (T-neck width)":         design.T_T,
+        "T_H (T-neck extension)":     design.T_H,
+        "T_R (T-top length)":         design.T_R,
+        "T_C (gap between Ts)":       design.T_C,
+        "G  (residual CPW gap)":      design.G,
+        "WS (signal trace width)":    design.WS,
+        "WG (ground trace width)":    design.WG,
+    }
+    for name, val in fab_features.items():
+        violations += _check_min(name, val, MIN_FEATURE_UM)
+
+    # --- 2. Metal thickness ---
+    violations += _check_min("TM (metal thickness)", design.TM, MIN_TM_UM)
+
+    # --- 3. Cladding gap above LTOI (can only INCREASE from baseline 0.20) ---
+    violations += _check_min("TSIO21 (cladding above LTOI)",
+                             design.TSIO21, MIN_TSIO21_UM)
+
+    # --- 4. Wide-segment ground rail width must remain ≥ 100 nm ---
+    #     The wide CPW in the loaded section has ground width WG - (T_S + T_H).
+    wide_ground = design.WG - (design.T_S + design.T_H)
+    violations += _check_min("WG - (T_S + T_H) (loaded-section ground rail)",
+                             wide_ground, MIN_FEATURE_UM)
+
+    # --- 5. Period sanity: T_R must fit inside the period ---
+    if design.T_R > design.P_T - MIN_FEATURE_UM:
+        violations.append(
+            f"FAIL  T_R = {design.T_R} μm leaves <100 nm gap inside period "
+            f"P_T = {design.P_T} μm. Increase T_C or shrink T_R.")
+
+    # --- 6. Process-fixed parameters must not be touched ---
+    for name, (expected, tol) in PROCESS_FIXED.items():
+        actual = getattr(design, name)
+        violations += _check_process_fixed(name, actual, expected, tol)
+
+    # --- 7. Sanity: the segmented section must have ≥ 5 unit cells ---
+    #     Below that the S-parameter phase slope is too short to extract n_eff.
+    if design.N_PERIODS < 5:
+        violations.append(
+            f"FAIL  N_PERIODS = {design.N_PERIODS} < 5; segmented section is "
+            f"too short for reliable n_eff extraction.")
+
+    return violations
 
 
 def main():
-    sim = create_simulation()
-    width_violations, space_violations, dbu = run_drc(sim)
-
-    n_width = width_violations.size()
-    n_space = space_violations.size()
-
-    print(f"Width violations: {n_width}")
-    print(f"Space violations: {n_space}")
-
-    if n_width == 0 and n_space == 0:
+    violations = run_drc()
+    print("=" * 60)
+    print("DRC — segmented CPW")
+    print("=" * 60)
+    print(f"  T-rail: T_S={design.T_S}  T_T={design.T_T}  "
+          f"T_H={design.T_H}  T_R={design.T_R}  T_C={design.T_C}")
+    print(f"  CPW   : G={design.G}   WS={design.WS}   WG={design.WG}")
+    print(f"  Stack : TM={design.TM}  TSIO21={design.TSIO21}")
+    print()
+    if not violations:
         print("DRC PASSED")
         return 0
-
-    print_violations(width_violations, space_violations, dbu)
-    save_violation_plot(sim, width_violations, space_violations, dbu)
-    print("DRC FAILED")
+    print(f"DRC FAILED — {len(violations)} violation(s):")
+    for v in violations:
+        print(f"  {v}")
     return 1
 
 

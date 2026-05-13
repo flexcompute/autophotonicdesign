@@ -1,91 +1,103 @@
-# Photonic Device Auto-Design Agent
+# AutoPhotonicDesign · Routing Branch
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+An autonomous design agent for chip-level electrical routing. Same
+Karpathy-style autoresearch loop as
+[`main`](https://github.com/flexcompute/autophotonicdesign), but the
+"simulator" is a PhotonForge layout pass: the agent tunes a routing
+strategy and the DRC violation count is the fitness signal.
 
-![schematic](schematic.svg)
+## What it does
 
-## How It Works
+A 32-net PhotonForge projector circuit (16 AMZIs, each with two
+thermo-optic phase shifters) needs every heater terminal connected to
+a bondpad at the die edge. The shipped baseline is naive Manhattan
+(`pf.parametric.route_manhattan`, each net routed alone) which produces
+**192 DRC violations**:
 
-Before the loop, the agent does a one-time **literature review** of the
-target device class — common topologies, underlying physics, state-of-the-art
-metrics — and captures it in `output/principles.md` as a stable design
-reference.
+- 30 routes crossing M1_heater (would short the heater to M2)
+- 162 route × route intersections
+- 0 pad × pad overlaps
 
-Each iteration then runs through a fixed loop:
+The agent edits `design.py` to swap the routing strategy and tune
+parameters. After ~27 iterations it converges on **0 violations** by
+moving from Manhattan → BFS grid → A* → Bundle → Hybrid, then turning
+on M1 obstacle blocking, increasing the cell margin, and inflating the
+obstacle polygons.
+
+## Layout
 
 ```
-Explore → Design → Verify (DRC + preview) → Simulate → Log (keep/discard)
+.
+├── program.md            # Agent brief: device, constraints, loop rules
+├── design.py             # THE ONLY FILE THE AGENT MODIFIES — MODE + CONFIG
+├── route.py              # Runs one experiment, archives + scores
+├── drc.py                # Quick pass/fail without archive
+├── preview.py            # Renders current layout as SVG (free)
+├── schematic.svg         # Loop diagram
+├── tools/                # Load-bearing harness modules
+│   ├── runners.py            # cfg_defaults, run_manhattan, run_grid
+│   ├── projector_circuit_setup.py    # The 32-net AMZI projector
+│   ├── routing_algorithms.py         # BFS, A*, Bundle, Rip-Up, Hybrid
+│   ├── pf_routing_arena.py           # PhotonForge ↔ grid-world bridge
+│   ├── pf_maze_router.py             # Single-net bridge
+│   ├── maze_router.py                # Lee's algorithm reference
+│   └── criteria.py                   # DRC scoring dataclass
+├── output/               # Auto-generated; .gitignored
+└── README.md
 ```
 
-Long-term memory spans two files: `output/principles.md` holds the literature
-review, and `output/journal.md` logs each experiment's hypothesis and lesson.
-Together they let the agent learn from both successes and failures and avoid
-repeating dead ends. The human's job is to define the problem (device type,
-constraints, target metric) in `program.md`; the agent does the engineering.
+## Difference from the main (passive) template
 
-## Example Designs
+Two notable differences:
 
-See a few examples of what the AI photonic designer has designed:
+1. **No cloud simulation.** Routing is pure CPU / PhotonForge work. A
+   full `route.py` run is **~3 seconds** of routing + a one-time
+   ~30 s import for PhotonForge + SiEPIC PDK. No FlexCredit cost.
+2. **`route.py` instead of `simulate.py`.** There's no FDTD here, so
+   the entry point is named for what it actually does.
 
-- [`1x2splitter`](../../tree/1x2splitter)
-- [`taper`](../../tree/taper)
-- [`crossing`](../../tree/crossing)
+The agent contract is otherwise identical: edit `design.py`, re-run
+`python route.py`, inspect `output/journal.md` and `output/results.tsv`.
 
-
-## Project Structure
-
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `orchestrate.py` | Post-simulation bookkeeping: parses run log, updates TSV/journal, handles keep/discard |
-| `output/` | All generated files (principles, logs, plots, journal, best design) |
-
-## Setup
+## Quickstart
 
 ```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
-```
+# 1. Install dependencies (Python 3.10+)
+pip install photonforge siepic-forge numpy matplotlib
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+# 2. Verify the layout renders (no cloud, no simulation)
+python preview.py        # writes output/preview.svg
 
-## Running
+# 3. Run a DRC pre-flight on the iter-1 baseline
+python drc.py            # prints 192 violations, exits 1
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+# 4. Run one full experiment with archive
+python route.py --description "naive Manhattan baseline"
 
-```bash
+# 5. Hand off to the agent
 claude "Follow the instructions in program.md and start designing!"
 ```
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+## Iter-1 baseline
 
-## Customizing for a Different Device
+`design.py` ships with `MODE = "manhattan_indep"`, `BLOCK_M1 = False`.
+Expected metrics:
 
-To adapt this framework to a new photonic device:
+| metric | value |
+|---|---|
+| routed | 32 / 32 |
+| heater violations | 30 |
+| route × route | 162 |
+| pad × pad | 0 |
+| score | 1920 |
+| wall time | ~3 s |
 
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`,
-   `orchestrate.py`) is device-agnostic and does not need to change.
+That's the starting point. The agent moves from there.
 
-## Credits
+## Citation
 
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+If you use this in published work, please cite Flexcompute's
+[Agentic Photonic Design for Routing](https://hs.flexcompute.com/blog/agentic-photonic-design-routing)
+blog post and Tom's
+[Learning Auto-Routing by Building](https://engineering.flexcompute.com/articles/electrical-routing-agents/)
+essay.

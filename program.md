@@ -1,141 +1,164 @@
-# Photonic Device Auto-Design Agent
+# Routing Auto-Design Agent
 
-You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop.
+You are an autonomous photonic-chip routing agent. You iteratively
+improve an electrical-routing strategy by modifying `design.py`, running
+the routing experiment with `python route.py`, and keeping changes
+that lower the violation score. You run **30 experiments** in a loop,
+never stopping, never asking the human for input.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+Your task: take a fixed 32-net PhotonForge **projector circuit** (16 AMZIs,
+each with two thermo-optic phase shifters that need a DC route to a
+bondpad at the die edge) and produce a routed layout with **zero DRC
+violations.** The starting baseline (`pf.parametric.route_manhattan`,
+each net routed independently) produces ~192 violations.
 
 ---
 
 ## 1. Platform Reference
 
-- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
-- **Operating wavelength:** 1550 nm (telecom C-band)
+- **Layout engine:** PhotonForge (`photonforge`)
+- **Routing layer:** M2 — GDS `(12, 0)` — 15 µm default trace width
+- **Obstacle layer:** M1_heater — GDS `(11, 0)` — routing across this
+  layer turns the heater into a heatsink and is a hard DRC failure
+- **Circuit:** 16 AMZIs (`siepic_forge.ebeam` PDK), assembled
+  geometry-only in `tools/projector_circuit_setup.py`. Each AMZI has
+  two heater terminals (`T0`, `T1`). 32 routes total.
+- **Bondpads:** 22 on top (y = +700 µm), 20 on bottom (y = −700 µm),
+  120 µm pitch, x-shifted by −1500 µm
 
 ---
 
 ## 2. Project Files
 
-You edit only `create_simulation()` in `design.py`. The harness scripts (`preview.py`, `drc.py`, `simulate.py`, `orchestrate.py`) are invoked by the steps below — don't modify them. Everything under `output/` is managed for you; read `principles.md`, `journal.md`, `results.tsv`, and the PNG artifacts, but treat `best_design.py` and `best_metric.txt` as harness state.
+| File | Role | Editable? |
+|---|---|---|
+| `program.md` | Agent instructions (this file) | No |
+| `design.py` | `MODE` + `CONFIG` dict (routing strategy) | **Yes** |
+| `route.py` | Runs one experiment, archives + scores | No |
+| `drc.py` | Quick pass/fail without archive | No |
+| `preview.py` | Renders current layout, no scoring | No |
+| `tools/runners.py` | Reusable `run_manhattan`, `run_grid` functions | No |
+| `tools/routing_algorithms.py` | BFS / A* / Bundle / Rip-Up / Hybrid | No |
+| `tools/pf_routing_arena.py` | Grid-world ↔ PhotonForge bridge | No |
+| `tools/criteria.py` | DRC scoring helpers | No |
+| `output/experiments/NNNN/` | Auto-managed | Don't touch |
+| `output/results.tsv` | Per-experiment log | Auto-managed |
+| `output/journal.md` | Long-term reasoning log | Yes (you write entries) |
 
 ---
 
-## 3. Design Constraints
+## 3. Design knobs (in `design.py`)
 
-### Device geometry
-
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
-- **Y-symmetry:** The device must be symmetric about y = 0.
-- **Minimum feature size:** 150 nm for all gaps, widths, and radii.
-
-### Code rules
-
-- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`). `evaluate()` may return a dict or a scalar (higher = better).
-- No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
-
----
-
-## 4. Experiment Loop
-
-**Before the first experiment:**
-
-1. Run `python orchestrate.py init` once. This creates `output/`, writes the `results.tsv` header, and seeds `journal.md`. Safe to re-run — it's idempotent.
-2. Do a **literature review** to establish design principles. Search for papers, tutorials, and design guides for the target device class. Cover common topologies, underlying physics, typical dimensions and analytical design formulas, and state-of-the-art metrics for comparison. Fully understand the design steps for each approach. Summarize the findings in `output/principles.md` — concise, structured by topology or theme. This becomes your stable reference and should guide topology choices throughout all 50 experiments.
-
-Repeat for experiments 1 through 50:
-
-### Step 1 — Review
-
-Read `design.py`, `output/principles.md`, `output/results.tsv`, and `output/journal.md`. Ground the next move in the literature principles and the lessons of previous experiments, including discarded ones.
-
-### Step 2 — Hypothesize
-
-Propose one specific design change. Explain why you expect the change to help.
-
-### Step 3 — Explore (usually needed)
-
-When you propose a new topology, sweep its key parameters (lengths, widths, radii) here to pick good values before committing. The 30-FDTD exploration budget is separate from the 50-experiment budget — use it. See [Section 5: Exploration](#5-exploration).
-
-### Step 4 — Edit
-
-Apply the new design to `design.py`.
-
-### Step 5 — Verify geometry
-
-Before spending simulation credits, run the automated fabrication check first, then inspect visually.
-
-1. Run `python drc.py`.
-   - **DRC FAILED** → inspect `output/drc.png` (red = width, blue = spacing). Fix `design.py` and re-run `drc.py`. Do NOT proceed until it passes.
-2. **DRC PASSED** → run `python preview.py N` (N = experiment number) and inspect `output/preview.png` against the [Preview Checklist](#6-preview-checklist). If anything looks wrong, fix `design.py` and re-run both `drc.py` and `preview.py`.
-
-### Step 6 — Simulate
-
-Run `python simulate.py > output/run.log 2>&1`. If it crashes, check `tail -n 50 output/run.log`:
-
-- **Typo / import error** — fix and retry this step.
-- **Divergence** — reduce `run_time` in `create_simulation()` or check for geometry overlaps; retry.
-- **Tidy3D server error** — wait 30 s and retry once; if it still fails, proceed to Step 7.
-- **Fundamentally broken idea** — proceed to Step 7 with a `--lesson` describing the crash; `orchestrate.py` auto-reverts.
-
-### Step 7 — Analyze and log
-
-If the simulation completed, inspect `output/field.png` (Ey real and |E|) — your observations feed the `--lesson`. Then run:
-
-```bash
-python orchestrate.py log N \
-    --hypothesis "What you changed and why (one line)" \
-    --lesson    "What you learned from the result (one line)"
+```python
+MODE     = "manhattan_indep" | "manhattan_seq" | "grid"
+CONFIG   = cfg_defaults(
+    ALGORITHM    = "BFS" | "A*" | "Bundle" | "Rip-Up" | "Hybrid",  # only used when MODE == "grid"
+    GRID_PITCH   = 25.0,         # µm  (10–50 sensible)
+    TRACE_WIDTH  = 15.0,         # µm
+    INFLATE_UM   = 0.0,          # polygon inflation in µm before rasterization
+    MARGIN       = 1,            # cell margin around route obstacles
+    M1_MARGIN    = 1,            # cell margin around heaters
+    BLOCK_M1     = True,         # treat (11, 0) as obstacle
+    BP_SPACING   = 120.0,        # bondpad x-pitch (µm)
+    BP_X_SHIFT   = -1500.0,
+    BP_Y_OFFSET  = 700.0,
+    SPLIT        = "by_terminal" | "by_y",
+    ASSIGNMENT   = "nearest" | "ordered",
+    T0_APPROACH  = ("W", "N", "S"),
+    T1_APPROACH  = ("E", "N", "S"),
+    PAD_LAYOUT   = "single_row",
+)
 ```
 
-`orchestrate.py` parses `output/run.log`, appends the TSV row and journal entry, compares metric vs. previous best, and either snapshots `design.py` as the new best or reverts it from `output/best_design.py`. It prints a one-line verdict (`KEPT` / `DISCARDED` / `CRASH`) — read it before starting the next experiment.
-
-### After 50 experiments
-
-Print a summary:
-
-- Best metric and which experiment produced it.
-- The design strategy that worked best.
-- Suggestions for further improvement.
+Out-of-the-box `design.py` ships with **iter-1 baseline**:
+`MODE = "manhattan_indep"`, `BLOCK_M1 = False`. That run produces
+~192 violations and is what the public blog post starts from.
 
 ---
 
-## 5. Exploration
+## 4. Design Constraints
 
-Use exploration to fine-tune parameter values (lengths, widths, radii, etc.) for a given topology. The 50-experiment budget is for topology-level moves; numerical tuning lives here, where you can sweep cheaply. Write and run Python scripts to inform your design choices before committing.
+### Hard DRC rules (must all pass)
+- `routed == n_total` — every net routed
+- `heater_violations == 0` — no route crosses M1_heater
+- `route_route_violations == 0` — no two routes share a cell
+- `pad_pad_violations == 0` — no bondpad overlaps another
 
-### Available tools
-
-- **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec`, and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
-- **Parameter sweeps (primary tool for fine tuning)** — Sweep each geometry parameter over a range using `td.web.Batch` or a loop and pick the best value. This is how you tune lengths, widths, and radii — not by burning sequential experiments each tweaking one number.
-- **Advanced optimization** — When grid sweeps scale poorly (high-dimensional or multi-modal parameter spaces), use smarter algorithms such as **Bayesian optimization**, **particle swarm**, or **adjoint inverse design**.
-- **Analytical calculations** — For example MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
-
-### Rules
-
-- Maximum **30 FDTD simulations** per experiment's exploration stage (sweeps and batches included, summed across any scripts you run). Mode solving and analytical calculations are unlimited.
-- Write scripts to a temp file (e.g., `output/explore.py`), run, and read output.
-- Exploration does not count toward the 50-experiment budget.
+### Soft (rank passing configs)
+- Bundling score — fraction of route cells with parallel neighbors
+- Total wirelength — sum of cell counts
+- Max turns per net
 
 ---
 
-## 6. Preview Checklist
+## 5. Experiment Loop
 
-**If you see ANY visual anomaly (gap, misalignment, unexpected color) in the preview, assume it is real until you have proven otherwise with a diagnostic script. NEVER dismiss an anomaly as a "rendering artifact."**
+Repeat for experiments 1 through 30:
 
-When inspecting `output/preview.png`, verify:
+### Step 1 — Review
+Read `output/results.tsv` and `output/journal.md`. Note the current best
+score and the last three experiments' lessons.
 
-1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
-5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ half wavelength between device features and the simulation-domain boundary.
-6. **Domain size** — Large enough for the full device with buffer.
+### Step 2 — Hypothesize
+Propose one specific change. Cite the journal entry it builds on.
+
+### Step 3 — Edit
+Modify `MODE` and/or `CONFIG` in `design.py`.
+
+### Step 4 — Pre-flight
+```bash
+python drc.py
+```
+If DRC passes, the design is clean enough to commit. If it fails, you can
+still run the full experiment to log progress, or rethink the change first.
+
+### Step 5 — Run the full experiment
+```bash
+python route.py --description "<one-line summary of the change>"
+```
+This builds the projector circuit, runs the routing, scores DRC, and
+archives the result to `output/experiments/NNNN/`. It prints a
+`=== Results ===` block you can grep for `metric_score`.
+
+### Step 6 — Decide
+- **Score improved or first pass** → keep `design.py` as is, append a
+  win to `output/journal.md`.
+- **Score worse** → revert `design.py` from `output/experiments/<last_kept>/design.py`,
+  append a lesson to `journal.md`.
+- **Crash** → append the lesson, revert.
+
+### After 30 experiments
+Print a summary: best score, design strategy that worked, suggestions.
 
 ---
 
-## 7. Strategy Tips
+## 6. Strategy Tips
 
-- **Experiments = topology moves. Exploration = parameter tuning.** Use each of your 50 experiment slots for a meaningfully different shape, junction, or device class. Numerical tuning (lengths, widths, radii) happens in Step 3 via parameter sweeps — not by burning experiments each tweaking one number.
-- **Coarse before fine.** Within a sweep, run a coarse grid before refining around the best point.
-- **Switch topology when stuck.** If the current topology plateaus after a sweep, try a fundamentally different approach. When you do, manually append a phase header to `journal.md` (e.g., `# Phase 2: MMI Splitter`).
-- **Be honest in lessons.** "Expected X but got Y because Z" is the most valuable kind of journal entry — include it for discarded and crashed experiments too.
+- The published blog post converged in **27 iterations**. Three phases:
+  baseline (Manhattan), grid maze router exploration (BFS → A* →
+  Bundle → Hybrid), obstacle-handling refinement (block M1, raise
+  margin, inflate polygons).
+- The very first improvement is usually **BLOCK_M1 = True** plus
+  switching to a grid maze router.
+- After turning the M1 obstacles on, `INFLATE_UM` (polygon inflation
+  before rasterization) is the key remaining knob.
+- Don't waste experiments on tiny pitch tweaks — each algorithm class
+  is one experiment.
+
+---
+
+## 7. Output format
+
+The agent should append to `output/journal.md` after every experiment:
+
+```markdown
+## Experiment 7 — block_m1_inflate2um
+
+- **Hypothesis**: enable BLOCK_M1 and inflate 2 µm to push routes off
+  the heater edges (last attempt overflowed by 8 cells along y=2)
+- **Diff**: BLOCK_M1 True→True (was already True), INFLATE_UM 0→2
+- **Result**: score 162→58 (improved), routed 32/32, heater=0, rr=14, pp=0
+- **Kept**: yes
+- **Lesson**: route–route is still the dominant violator class. Try
+  bundling next, then rip-up.
+```

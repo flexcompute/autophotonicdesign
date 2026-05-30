@@ -10,6 +10,11 @@ FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
 patterns, and decides whether to keep or discard each design — all without
 human intervention.
 
+This repository holds the per-device design runs behind our paper on
+autonomous agentic photonic design (manuscript in preparation); see
+[Reproducing the paper](#reproducing-the-paper) below for the map from
+branches to paper sections.
+
 ![schematic](schematic.svg)
 
 ## How It Works
@@ -31,13 +36,24 @@ Together they let the agent learn from both successes and failures and avoid
 repeating dead ends. The human's job is to define the problem (device type,
 constraints, target metric) in `program.md`; the agent does the engineering.
 
-## Example Designs
+## Reproducing the paper
 
-See a few examples of what the AI photonic designer has designed:
+`main` is the device-agnostic framework. Each demonstration in the paper was
+run on its own branch; check out the branch to get that device's `program.md`,
+`design.py`, run journal (`output/journal.md`), and best design.
 
-- [`1x2splitter`](../../tree/1x2splitter)
-- [`taper`](../../tree/taper)
-- [`crossing`](../../tree/crossing)
+| Branch | Paper § | Device | Headline result |
+|--------|---------|--------|------------------|
+| [`bend`](../../tree/bend) | 3.1 | SiN 90° bend, R = 12 µm | 0.109 dB (97.51% transmission) |
+| [`1x2splitter`](../../tree/1x2splitter) | 3.1 | SOI 1×2 splitter | 0.015 dB insertion loss |
+| [`taper`](../../tree/taper) | 3.1 | SOI taper, 6 µm | 0.114 dB |
+| [`grating_coupler`](../../tree/grating_coupler) | 3.1 | SOI focused grating coupler | 2.89 dB peak coupling loss |
+| [`crossing`](../../tree/crossing) | 3.1 | SOI waveguide crossing | 0.11 dB insertion loss |
+| [`pn_modulator`](../../tree/pn_modulator) | 3.2 | Si microring modulator (lateral PN) | VπL·Cj ≈ 4.4 V·pF |
+| [`rf_transmission_lines`](../../tree/rf_transmission_lines) | 3.3 | Segmented slow-wave CPW electrode | Z₀ ≈ 43–44 Ω; α₀ ≈ 0.29–0.36 (dB/cm/√GHz) |
+| [`routing`](../../tree/routing) | 3.4 | Electrical routing, 32 nets | 192 → 0 DRC violations |
+
+The [`edge_coupler`](../../tree/edge_coupler) branch is an additional device not reported in the paper.
 
 
 ## Project Structure
@@ -54,12 +70,18 @@ See a few examples of what the AI photonic designer has designed:
 
 ## Setup
 
+Python 3.10+.
+
 ```bash
 pip install tidy3d numpy matplotlib klayout
 tidy3d configure --apikey=YOUR_API_KEY
 ```
 
-Get your Tidy3D API key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud).
+Tidy3D is a paid cloud FDTD service; get an API key at
+[tidy3d.simulation.cloud](https://tidy3d.simulation.cloud). The `routing` branch
+additionally uses [PhotonForge](https://www.flexcompute.com/photonforge/) (a
+Flexcompute product) for layout; the passive and active EM runs need only the
+packages above.
 
 ## Running
 

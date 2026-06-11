@@ -1,113 +1,117 @@
-# Photonic Device Auto-Design Agent
+# Agentic Photonic Design: Packing a Design-of-Experiments Chip
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+An autonomous agent that designs and floor-plans a photonic Design-of-Experiments
+(DoE) test chip. Instead of an engineer hand-tiling a multi-project-wafer (MPW)
+submission, two LLM agents (e.g. Claude Code) do the job: one **plans** the
+experiment (which devices to sweep, over what ranges), and a second **packs** as
+many measurable, manufacturable, probeable test structures as physically fit onto
+a fixed die, every one placed, routed, and design-rule clean.
 
-This repository holds the per-device design runs behind our paper on
-autonomous agentic photonic design (manuscript in preparation); see
-[Reproducing the paper](#reproducing-the-paper) below for the map from
-branches to paper sections.
+Everything runs **free and local**: layout, place-and-route, geometric checks, and
+the KLayout DRC deck. No cloud simulations.
 
-![schematic](schematic.svg)
+![evolution](evolution.gif)
 
-## How It Works
+## How it works
 
-Before the loop, the agent does a one-time **literature review** of the
-target device class — common topologies, underlying physics, state-of-the-art
-metrics — and captures it in `output/principles.md` as a stable design
-reference.
+The work splits across two agents that share only a file:
 
-Each iteration then runs through a fixed loop:
+1. **Planner** (`plan.py`) reads the device library and writes a DoE to
+   `blackboard/doe_plan.json`: which parameter of each device to sweep, the range
+   and number of points, and which devices need electrical pads.
+2. **Packer** (`optimize.py`) reads that plan and tiles the die in a
+   `build -> verify -> score -> journal` loop. It first ramps replicates of the
+   whole DoE to capacity, then void-fills the leftover gaps with more real
+   structures until no remaining gap can hold the smallest device. Every step is
+   scored by a **gated** figure of merit (maximize structures placed, but score
+   zero if any hard check fails) and logged to `output/journal.md`, so the
+   reasoning survives across iterations.
 
-```
-Explore → Design → Verify (DRC + preview) → Simulate → Log (keep/discard)
-```
+The constraint that makes this more than rectangle packing is that every site has
+to be *measurable*. Grating couplers sit at the fiber-array pitch, bond pads at the
+probe pitch, and every site keeps one orientation so a wafer prober lands its fiber
+array and probe card identically at each one (no rotation). A layout can be
+DRC-clean and still unmeasurable; the loop checks both.
 
-Long-term memory spans two files: `output/principles.md` holds the literature
-review, and `output/journal.md` logs each experiment's hypothesis and lesson.
-Together they let the agent learn from both successes and failures and avoid
-repeating dead ends. The human's job is to define the problem (device type,
-constraints, target metric) in `program.md`; the agent does the engineering.
+## Verification harness
 
-## Reproducing the paper
+The agent never grades its own homework. Each iteration is scored by an
+independent set of checks in `tools/`:
 
-`main` is the device-agnostic framework. Each demonstration in the paper was
-run on its own branch; check out the branch to get that device's `program.md`,
-`design.py`, run journal (`output/journal.md`), and best design.
+| Check | What it catches |
+|-------|-----------------|
+| KLayout DRC (`validation.py`) | SiEPIC foundry rule deck: width, spacing, metal overlap, dicing boundary |
+| Geometric collisions | exact boolean overlap of routing layers: touching sites, self-crossing routes, stray metal |
+| Connectivity (LVS-style) | every site's optical path realized, no dangling ports |
+| Orientation gate | every site shares one pose (the wafer-prober rule) |
+| Largest-empty-rectangle | where to pack next, and when the die is full |
 
-| Branch | Paper § | Device | Headline result |
-|--------|---------|--------|------------------|
-| [`bend`](../../tree/bend) | 3.1 | SiN 90° bend, R = 12 µm | 0.109 dB (97.51% transmission) |
-| [`1x2splitter`](../../tree/1x2splitter) | 3.1 | SOI 1×2 splitter | 0.015 dB insertion loss |
-| [`taper`](../../tree/taper) | 3.1 | SOI taper, 6 µm | 0.114 dB |
-| [`grating_coupler`](../../tree/grating_coupler) | 3.1 | SOI focused grating coupler | 2.89 dB peak coupling loss |
-| [`crossing`](../../tree/crossing) | 3.1 | SOI waveguide crossing | 0.11 dB insertion loss |
-| [`pn_modulator`](../../tree/pn_modulator) | 3.2 | Si microring modulator (lateral PN) | VπL·Cj ≈ 4.4 V·pF |
-| [`rf_transmission_lines`](../../tree/rf_transmission_lines) | 3.3 | Segmented slow-wave CPW electrode | Z₀ ≈ 43–44 Ω; α₀ ≈ 0.29–0.36 (dB/cm/√GHz) |
-| [`routing`](../../tree/routing) | 3.4 | Electrical routing, 32 nets | 192 → 0 DRC violations |
+## Project structure
 
-The [`edge_coupler`](../../tree/edge_coupler) branch is an additional device not reported in the paper.
-
-
-## Project Structure
-
-| File | Role |
+| Path | Role |
 |------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `orchestrate.py` | Post-simulation bookkeeping: parses run log, updates TSV/journal, handles keep/discard |
-| `output/` | All generated files (principles, logs, plots, journal, best design) |
+| `program_planner.md` | Instructions for the planner agent (Phase 0) |
+| `program.md` | Instructions for the packer agent (Phases 1 and 2) |
+| `plan.py` | Planner: designs the DoE, writes `blackboard/doe_plan.json` |
+| `optimize.py` | Packer: fills the fixed die, streams the journal, builds the GIF |
+| `tools/` | Device library (`library.py`), PCells (`components.py`), site builder (`test_structures.py`), floorplanner (`floorplan.py`), validation, scoring, inspection |
+| `components_gds/` | User-supplied GDS devices (the demo ships a 1x2 Y-branch) |
+| `blackboard/die.yaml` | The fixed die and rules (human-editable) |
+| `output/` | Generated: per-step layouts, journal, results, evolution GIF |
 
 ## Setup
 
-Python 3.10+.
+```bash
+pip install photonforge siepic-forge klayout numpy matplotlib pillow
+```
+
+PhotonForge uses your Flexcompute account; configure credentials once:
 
 ```bash
-pip install tidy3d numpy matplotlib klayout
 tidy3d configure --apikey=YOUR_API_KEY
 ```
 
-Tidy3D is a paid cloud FDTD service; get an API key at
-[tidy3d.simulation.cloud](https://tidy3d.simulation.cloud). The `routing` branch
-additionally uses [PhotonForge](https://www.flexcompute.com/photonforge/) (a
-Flexcompute product) for layout; the passive and active EM runs need only the
-packages above.
+Get a key at [tidy3d.simulation.cloud](https://tidy3d.simulation.cloud). This loop
+is fully local and consumes no cloud credits.
+
+Optional, to capture the live-view frames and stitch the evolution GIF, also
+install Playwright; without it the loop runs headless and skips the frames:
+
+```bash
+pip install playwright && playwright install chromium
+```
 
 ## Running
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+Run the two phases directly:
 
 ```bash
-claude "Follow the instructions in program.md and start designing!"
+python plan.py                       # Phase 0: design the DoE -> blackboard/doe_plan.json
+python optimize.py                   # Phases 1-2: pack the fixed die -> output/
+python make_gif_from_frames.py 1.8   # optional: stitch the evolution GIF
 ```
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+Or hand the whole job to an agent:
 
-## Customizing for a Different Device
+```bash
+claude "Read program_planner.md and run the planner, then read program.md and pack the die."
+```
 
-To adapt this framework to a new photonic device:
+Watch progress in `output/journal.md` and `output/results.tsv`. Preview the device
+library or any packed step in the PhotonForge LiveViewer with `view_pcells.py` and
+`view_last.py`.
 
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`,
-   `orchestrate.py`) is device-agnostic and does not need to change.
+## Bring your own devices
 
-## Credits
+The loop never hard-codes a device list; it reads a library. To run the same loop
+on your own devices, edit `default_library()` in `tools/library.py`:
 
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+```python
+lib["my_pcell"] = pcell_source("my_pcell", my_factory, measures="...", primary_param="length")
+lib["my_gds"]   = gds_source("my_gds", "components_gds/my_device.gds", measures="...")
+```
+
+A PCell is any `@photonforge.parametric_component` factory, swept by argument; a
+GDS device is loaded and given ports by auto-detection. Both flow through the same
+plan, pack, and verify loop.
+```

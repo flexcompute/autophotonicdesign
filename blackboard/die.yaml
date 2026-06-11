@@ -1,0 +1,40 @@
+# die.yaml — the fixed constraints for the v1 DoE-packing campaign.
+# Read by the planner (plan.py) and the loop (optimize.py); the human-editable "blackboard".
+
+die:
+  # FIXED die for this campaign : 8 mm x 3 mm = 24 mm^2 (within the 25 mm^2 MPW area tier).
+  # The loop does NOT reshape the die in v1 — it fills this fixed footprint.
+  width_um: 8000.0
+  height_um: 3000.0
+  fixed: true
+  dice_margin_um: 25.0            # kept clear around every edge for the dicing saw
+
+mpw_area_tiers_mm2: [25, 50, 100] # standard MPW die-area tiers; the die area is the fixed budget
+
+# Optical IO: a 4-channel fiber array couples vertically to each site's grating-coupler pair.
+fiber_array:
+  channels: 4
+  pitch_um: 127.0                 # every site stacks its 2 GCs at this pitch (a fiber-array site)
+
+# Electrical IO: probe-card / wire-bond pads.
+bondpads:
+  min_pitch_um: 150.0             # within a structure (one probe-card touchdown)
+
+# Hard rules the validation gates enforce.
+rules:
+  same_prober_direction: true     # ALL grating-coupler arrays face WEST, ALL pad cages face SOUTH,
+                                   # so the wafer prober's fiber array + probe card land the same way
+                                   # at every site. Enforced by allow_rotation=False packing +
+                                   # the orientation_consistent gate (one pose, no reflection).
+  no_waveguide_crossing: true     # routing must not add Si overlap (a device's own intended
+                                   # internal crossing, e.g. the `crossing` element, is allowed).
+  no_inter_structure_overlap: true
+  m2_never_crosses_m1: true       # M2 over M1 heater only inside intended M_Open via windows
+  dicing_keepout: true            # Si must stay inside the FloorPlan (die minus dicing ring)
+
+# Device library: where the DoE devices come from (see tools/library.py).
+device_library:
+  pcells_from: tools/components.py          # @parametric_component factories (swept by the planner)
+  gds_from: components_gds/                  # user-supplied .gds/.oas (ingested via load_layout)
+  # A user runs the SAME loop on their own devices by editing tools/library.default_library():
+  #   add pcell_source(...) for their PCells, or gds_source("dev", "components_gds/dev.gds", ...).

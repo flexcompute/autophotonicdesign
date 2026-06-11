@@ -1,141 +1,111 @@
-# Photonic Device Auto-Design Agent
+# Autonomous DoE-Packing Loop — program (Phase 1)
 
-You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop.
+You are an autonomous layout agent. Your job: **pack as many DoE test structures as possible onto
+one FIXED 8 × 3 mm die, every structure placed AND routed AND gate-clean.** Area is money. The die
+sits within the 25 mm² MPW area tier, and you have already paid for all 24 mm² of it.
+**Every µm² of packable area you leave empty is wafer you bought and threw away.** Fitting more
+experiments per die is the objective. Everything here is **free and local**: no cloud simulations
+run in this loop.
 
-Today, you are tasked to design a silicon photonic low-loss Y splitter.
+You take over from the plan (`blackboard/doe_plan.json`, written by Phase 0 / `program_planner.md`).
+You do not redesign the experiment. You fill the die with it.
 
----
+### Best use of the real estate (the prime directive)
 
-## 1. Platform Reference
+1. **Pack until nothing more fits.** The loop is DONE only when **no remaining gap anywhere on the
+   die can hold the smallest test site** (the true plateau). It is NOT done because the single
+   biggest leftover box is large, and it is NOT done at a round-number occupancy. Walking away from
+   site-shaped gaps is the same as discarding paid-for wafer.
+2. **Measure *packable* area, not raw area.** A leftover region is only worth counting if a site
+   fits in it. A 8000 × 80 µm full-width sliver has huge area but holds nothing, so it must never be
+   mistaken for "the biggest void" and never end the loop. `largest_empty_rectangle(..., smallest_dut=)`
+   returns the largest box **that can actually hold a site** and reports `fits_smallest_dut == 0`
+   when none remains. That zero, not a raw-area or percentage threshold, is the stop signal.
+3. **Fill heterogeneously.** Big voids take the big devices (modulators, long spirals); the small
+   gaps between rows take the small ones (crossings, Y-branches, short straights). Replicate the
+   *whole* pool into each void and let the packer drop in whatever fits, so the DoE stays balanced
+   while the die fills.
+4. **The only acceptable leftover is unpackable.** When you report the final occupancy, the residual
+   must be fragments each smaller than the smallest site. If a whole site still fits, you are not
+   done.
 
-- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
-- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
-- **Operating wavelength:** 1550 nm (telecom C-band)
+## What is fixed vs. what you tune
 
----
+**Fixed (do not change):**
+- The **die** is 8 × 3 mm. v1 does not reshape the die.
+- **No rotation.** Packing is translation-only so every site keeps its built orientation — every
+  grating-coupler array faces **west**, every bond-pad cage faces **south**. This is the wafer-
+  prober same-direction rule; the `orientation_ok` gate enforces it.
+- The DoE **variety** comes from the plan.
 
-## 2. Project Files
+**Your levers (this is the optimization):**
+1. **Replicate multiplier** (Phase 1): how many copies of the base DoE to pack as one block (the
+   fill ramp, sparse to full, until one more whole copy spills).
+2. **Void-fill** (Phase 2): after the uniform block packs, recover the corner/edge/inter-row voids
+   it leaves by packing MORE real DoE replicates into every packable empty rectangle, until none
+   remains. This is where most of the final occupancy is won, because a single uniform multiplier
+   always leaves a fragmented residual.
+3. **Pack strategy**: `METHOD` ∈ {blsf, bssf, baf}, `SORTING` ∈ {area, width, height, perimeter},
+   `PACK_GAP` (the bbox-to-bbox squeeze). Smaller `PACK_GAP` packs denser; keep it large enough that
+   the per-site collision and DRC gates stay clean.
 
-You edit only `create_simulation()` in `design.py`. The harness scripts (`preview.py`, `drc.py`, `simulate.py`, `orchestrate.py`) are invoked by the steps below — don't modify them. Everything under `output/` is managed for you; read `principles.md`, `journal.md`, `results.tsv`, and the PNG artifacts, but treat `best_design.py` and `best_metric.txt` as harness state.
+## The figure of merit (gated)
 
----
+`FOM = n_placed + 0.5·fill_fraction`, **zeroed unless every hard gate passes**:
+`fits_in_die`, `area_ok`, `min_dim_ok`, `collisions_clean`, `orientation_ok`, `drc_pass`
+(KLayout sign-off is run separately; in-loop it is a skipped gate). Maximize `n_placed`;
+tie-break on `fill_fraction`.
 
-## 3. Design Constraints
+## The loop (`optimize.py`)
 
-### Device geometry
+Phase 1 (**fill ramp**): ramp the replicate multiplier 1 → capacity on the fixed die. Stop the ramp
+when one more whole copy of the base DoE spills (the previous multiplier was the uniform-block
+capacity, typically ~70 to 75% fill). This phase alone never fills the die: a uniform block leaves
+a corner void plus thin edge bands.
 
-- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
-- **Y-symmetry:** The device must be symmetric about y = 0.
-- **Minimum feature size:** 150 nm for all gaps, widths, and radii.
+Phase 2 (**void-fill to the true plateau**): repeatedly find the largest empty rectangle that can
+still hold the smallest site (`largest_empty_rectangle(..., smallest_dut=)`) and pack more real DoE
+replicates into it, looping until `fits_smallest_dut == 0` everywhere. Fills are batched (~0.4 mm²
+of new sites per recorded frame) so the GIF stays smooth, but the loop does not stop until the die
+is genuinely exhausted. This phase is what carries occupancy from the ramp capacity up to the
+packable ceiling; do not cap it at a fixed iteration count or a round-number percentage.
 
-### Code rules
+Each iteration: build (shared-reference replicates — N copies of one cell pack as N placements,
+instant) → pack → validate (`check_collisions` + `orientation_consistent`) → score → archive
+(`output/experiments/NNNN/{chip.gds, chip.svg, result.json}`) → **append AND print the full journal
+entry** → update the LiveViewer and capture a screenshot (`output/frames/NNNN.png`).
 
-- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`). `evaluate()` may return a dict or a scalar (higher = better).
-- No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
+**The journal streams to the terminal.** Every step prints its journal block — what changed, the
+FOM, every gate verdict (collisions / orientation / fits), placed/total, fill %, the cost headline,
+keep/discard. Watching the terminal is reading the journal. The same text is appended to
+`output/journal.md`; one row per step goes to `output/results.tsv`.
 
----
+## Inspect / debug (one import: `from tools import toolbox as T`)
 
-## 4. Experiment Loop
+- `T.summary(chip, ...)` — reduced-order hierarchical view (reason about this, not raw GDS).
+- `T.check_collisions(chip)` / `T.show_collisions(chip, "Si")` — gated report / exact overlap polygons.
+- `T.orientation_consistent(chip)` — the wafer-prober pose gate (one pose, no reflection).
+- `T.run_drc(gds)` — KLayout SiEPIC DRC (the separate hard sign-off).
+- `T.route_length(...)`, `T.tree_view(chip)`, `T.lvs(chip)`, `T.largest_empty_rectangle(chip)`.
+- LiveViewer navigation via the `mcp__Claude_Preview__preview_*` tools + `T.NAV_JS`
+  (`pfnav.resetView/zoomIn/layers/...`) — zoom into a flagged site before deciding a fix.
 
-**Before the first experiment:**
+## Do not
 
-1. Run `python orchestrate.py init` once. This creates `output/`, writes the `results.tsv` header, and seeds `journal.md`. Safe to re-run — it's idempotent.
-2. Do a **literature review** to establish design principles. Search for papers, tutorials, and design guides for the target device class. Cover common topologies, underlying physics, typical dimensions and analytical design formulas, and state-of-the-art metrics for comparison. Fully understand the design steps for each approach. Summarize the findings in `output/principles.md` — concise, structured by topology or theme. This becomes your stable reference and should guide topology choices throughout all 50 experiments.
+Edit only the plan (`blackboard/doe_plan.json` via `plan.py`) and `optimize.py`'s schedule. Do not
+edit `tools/`. If you think a tool is wrong, say so in the journal — never patch the harness to
+make a number look better. Keep rotation OFF (the prober rule). Report the cost headline (smallest
+MPW tier the result fits, $ per 20-chip lot).
 
-Repeat for experiments 1 through 50:
+## What "done" looks like
 
-### Step 1 — Review
+A climbing-then-plateauing FOM in `results.tsv`, a streamed journal explaining every move, archived
+`chip.gds` per step, and `output/evolution.gif` showing the fixed 8 × 3 mm die filling from a sparse
+base DoE to a dense, fully routed, prober-aligned, gate-clean DoE chip with the cost headline.
 
-Read `design.py`, `output/principles.md`, `output/results.tsv`, and `output/journal.md`. Ground the next move in the literature principles and the lessons of previous experiments, including discarded ones.
-
-### Step 2 — Hypothesize
-
-Propose one specific design change. Explain why you expect the change to help.
-
-### Step 3 — Explore (usually needed)
-
-When you propose a new topology, sweep its key parameters (lengths, widths, radii) here to pick good values before committing. The 30-FDTD exploration budget is separate from the 50-experiment budget — use it. See [Section 5: Exploration](#5-exploration).
-
-### Step 4 — Edit
-
-Apply the new design to `design.py`.
-
-### Step 5 — Verify geometry
-
-Before spending simulation credits, run the automated fabrication check first, then inspect visually.
-
-1. Run `python drc.py`.
-   - **DRC FAILED** → inspect `output/drc.png` (red = width, blue = spacing). Fix `design.py` and re-run `drc.py`. Do NOT proceed until it passes.
-2. **DRC PASSED** → run `python preview.py N` (N = experiment number) and inspect `output/preview.png` against the [Preview Checklist](#6-preview-checklist). If anything looks wrong, fix `design.py` and re-run both `drc.py` and `preview.py`.
-
-### Step 6 — Simulate
-
-Run `python simulate.py > output/run.log 2>&1`. If it crashes, check `tail -n 50 output/run.log`:
-
-- **Typo / import error** — fix and retry this step.
-- **Divergence** — reduce `run_time` in `create_simulation()` or check for geometry overlaps; retry.
-- **Tidy3D server error** — wait 30 s and retry once; if it still fails, proceed to Step 7.
-- **Fundamentally broken idea** — proceed to Step 7 with a `--lesson` describing the crash; `orchestrate.py` auto-reverts.
-
-### Step 7 — Analyze and log
-
-If the simulation completed, inspect `output/field.png` (Ey real and |E|) — your observations feed the `--lesson`. Then run:
-
-```bash
-python orchestrate.py log N \
-    --hypothesis "What you changed and why (one line)" \
-    --lesson    "What you learned from the result (one line)"
-```
-
-`orchestrate.py` parses `output/run.log`, appends the TSV row and journal entry, compares metric vs. previous best, and either snapshots `design.py` as the new best or reverts it from `output/best_design.py`. It prints a one-line verdict (`KEPT` / `DISCARDED` / `CRASH`) — read it before starting the next experiment.
-
-### After 50 experiments
-
-Print a summary:
-
-- Best metric and which experiment produced it.
-- The design strategy that worked best.
-- Suggestions for further improvement.
-
----
-
-## 5. Exploration
-
-Use exploration to fine-tune parameter values (lengths, widths, radii, etc.) for a given topology. The 50-experiment budget is for topology-level moves; numerical tuning lives here, where you can sweep cheaply. Write and run Python scripts to inform your design choices before committing.
-
-### Available tools
-
-- **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec`, and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
-- **Parameter sweeps (primary tool for fine tuning)** — Sweep each geometry parameter over a range using `td.web.Batch` or a loop and pick the best value. This is how you tune lengths, widths, and radii — not by burning sequential experiments each tweaking one number.
-- **Advanced optimization** — When grid sweeps scale poorly (high-dimensional or multi-modal parameter spaces), use smarter algorithms such as **Bayesian optimization**, **particle swarm**, or **adjoint inverse design**.
-- **Analytical calculations** — For example MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
-
-### Rules
-
-- Maximum **30 FDTD simulations** per experiment's exploration stage (sweeps and batches included, summed across any scripts you run). Mode solving and analytical calculations are unlimited.
-- Write scripts to a temp file (e.g., `output/explore.py`), run, and read output.
-- Exploration does not count toward the 50-experiment budget.
-
----
-
-## 6. Preview Checklist
-
-**If you see ANY visual anomaly (gap, misalignment, unexpected color) in the preview, assume it is real until you have proven otherwise with a diagnostic script. NEVER dismiss an anomaly as a "rendering artifact."**
-
-When inspecting `output/preview.png`, verify:
-
-1. **Structures** — All waveguides and features are visible. No missing pieces.
-2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
-3. **Source** — Inside the input waveguide, before the device, not in PML.
-4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
-5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ half wavelength between device features and the simulation-domain boundary.
-6. **Domain size** — Large enough for the full device with buffer.
-
----
-
-## 7. Strategy Tips
-
-- **Experiments = topology moves. Exploration = parameter tuning.** Use each of your 50 experiment slots for a meaningfully different shape, junction, or device class. Numerical tuning (lengths, widths, radii) happens in Step 3 via parameter sweeps — not by burning experiments each tweaking one number.
-- **Coarse before fine.** Within a sweep, run a coarse grid before refining around the best point.
-- **Switch topology when stuck.** If the current topology plateaus after a sweep, try a fundamentally different approach. When you do, manually append a phase header to `journal.md` (e.g., `# Phase 2: MMI Splitter`).
-- **Be honest in lessons.** "Expected X but got Y because Z" is the most valuable kind of journal entry — include it for discarded and crashed experiments too.
+"Done" specifically means **no remaining empty rectangle can hold the smallest test site** (the
+journal prints this as the plateau reason). The final occupancy is whatever that ceiling turns out
+to be, reported honestly: the leftover is unpackable fragments, not abandoned site-shaped gaps. As a
+final sign-off, run KLayout DRC on the packed `chip.gds` (`T.run_drc`) and report it, since the
+in-loop FOM treats DRC as a skipped gate; if the chosen `PACK_GAP` produces spacing violations,
+raise it and re-pack rather than reporting an unmanufacturable density.

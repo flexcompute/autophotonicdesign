@@ -1,18 +1,18 @@
-"""The gates. Builds design/chip.py, checks it, and scores it against spec.yaml.
+"""The gates. This script builds design/chip.py, does the checks, and compares the result with spec.md.
 
-    python tools/verify.py                       # all gates, blind dies from spec.yaml
-    python tools/verify.py --gates build,drc,lvs # layout gates only (fast)
-    python tools/verify.py --dies 2              # fewer blind dies while iterating
-    python tools/verify.py --seeds 123 456       # re-run given dies (to reproduce a failure)
+    python tools/verify.py                       # all gates, with the number of blind dies in spec.md
+    python tools/verify.py --gates build,drc,lvs # only the layout gates (fast)
+    python tools/verify.py --dies 2              # fewer blind dies during development
+    python tools/verify.py --seeds 123 456       # the same dies again (to repeat a failure)
 
-Gates, in order (a failed gate stops the later ones):
-  build    design/chip.py build() returns a component with the spec's ports, heater terminals, size
-  drc      PDK DRC deck: 0 violations
-  lvs      PDK LVS: layout matches the netlist intent
-  nominal  calibrate() on the nominal die, then post-layout circuit simulation meets the 'nominal' targets
-  dies     calibrate() on blind virtual dies; the share of dies that meet the 'die' targets >= pass_fraction
+The gates, in sequence. If a gate fails, the script does not do the gates that follow:
+  build    build() in design/chip.py gives a component with the ports, heater terminals, and size of the spec
+  drc      the DRC rules of the PDK: 0 violations
+  lvs      the LVS of the PDK: the layout agrees with the netlist
+  nominal  calibrate() on the nominal die; the post-layout circuit simulation meets the 'nominal' targets
+  dies     calibrate() on blind virtual dies; the fraction of dies that meet the 'die' targets is at least pass_fraction
 
-Writes output/verify.json and output/verify.png. Exit code 0 only if every gate run passed.
+The script writes output/verify.json and output/verify.png. The exit code is 0 only if all gates that ran pass.
 """
 
 import argparse
@@ -111,7 +111,7 @@ def plot(spec, wl, nominal_resp, die_resps, path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--gates", default=",".join(GATES))
-    ap.add_argument("--dies", type=int, default=None, help="number of blind dies (default from spec.yaml)")
+    ap.add_argument("--dies", type=int, default=None, help="number of blind dies (default from spec.md)")
     ap.add_argument("--seeds", type=int, nargs="*", default=None, help="explicit die seeds instead of random ones")
     ap.add_argument("--design", default=None)
     ap.add_argument("--tuning", default=None)

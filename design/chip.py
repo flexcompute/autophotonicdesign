@@ -1,15 +1,14 @@
-"""The chip. The layout agent owns this file; the others read it.
+"""The chip layout. The layout agent owns this file. The other agents only read it.
 
-Contract (tools/verify.py checks it):
+Requirements (tools/verify.py does a check of each one):
     build() -> pf.Component
-      - top-level optical ports and heater terminals named as in spec.yaml (layout section)
-      - fits layout.max_size; DRC clean and LVS clean on the spec's PDK
-      - a CircuitModel on the chip, and a model on every reference, so post-layout circuit
-        simulation runs offline (tools/pdks/<pdk>.py: fast_models gives route pieces analytic models)
-      - route optical nets with tools/routing.py (one route_auto call, added per net), so LVS sees
-        one wire per net
+      - The top-level optical ports and heater terminals have the names in spec.md (layout section of the numbers).
+      - The chip is in layout.max_size. It is DRC clean and LVS clean on the PDK of the spec.
+      - The chip has a CircuitModel, and each reference has a model. Then the post-layout circuit
+        simulation runs on this computer. (tools/pdks/<pdk>.py: fast_models gives a model to the route pieces.)
+      - Route the optical nets with tools/routing.py (one route_auto call, one LVS wire for each net).
 
-Build from PDK cells (tools/pdks/<pdk>.py: library) and from design/components/ for new cells.
+Use PDK cells (tools/pdks/<pdk>.py: library). Use design/components/ only for new cells.
 """
 
 import os

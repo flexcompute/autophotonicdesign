@@ -1,90 +1,146 @@
-# Agent Team: Design a Whole Photonic Chip
+# Agent Team: Design a Full Photonic Chip
 
-A team of AI agents (Claude Code subagents) designs a complete photonic chip from a spec: system
-design, components, layout and routing, DRC and LVS, post-layout circuit simulation, and heater
-calibration on virtual dies. A lead agent plans and gates the work; four specialists do it.
+A team of AI agents designs a full photonic chip from a request in words. The team does the
+system design, the components, the layout and routing, DRC and LVS, the post-layout circuit
+simulation, and the heater calibration on virtual dies. One lead agent plans and checks the work.
+Four specialist agents do the work.
 
-The demo chip is a two-channel heated MZI lattice demux on SiPhoPDK (O-band): flat-top pass bands
-at 1310 nm and 1315 nm, heaters that set the lattice phases and correct die-to-die variation.
+The example chip is a tunable 2-channel lattice demux in the O-band on SiPhoPDK. It has flat-top
+pass bands at 1310 nm and 1315 nm. Heaters set the phases of the lattice and correct the variation
+between dies.
+
+## How the agent team works
+
+```mermaid
+flowchart LR
+    H["<b>Human</b><br/>request in words<br/>approves the spec"]
+    subgraph T["Agent team"]
+        direction TB
+        L["<b>Lead</b><br/>writes spec.md, plans, checks gates"]
+        A["<b>Architect</b><br/>system design, block targets"]
+        C["<b>Component</b><br/>blocks from PDK cells"]
+        Y["<b>Layout</b><br/>place, route, pads"]
+        V["<b>Verify</b><br/>DRC, LVS, post-layout simulation"]
+        D["<b>Calibrate</b><br/>heaters on virtual dies"]
+        J{"<b>Judge</b><br/>meets spec?"}
+        L --> A --> C --> Y --> V --> D --> J
+        J -- "no: fix" --> L
+    end
+    O["<b>Outputs</b><br/>design/chip.py<br/>design/tuning.py<br/>output/REPORT.md"]
+    H --> T
+    T -- "yes" --> O
+
+    classDef human fill:#E8EBF0,stroke:#3A3F4B,color:#3A3F4B
+    classDef lead fill:#F5F5F5,stroke:#535E59,color:#222
+    classDef design fill:#F8E1C0,stroke:#A0522D,color:#7A3E12
+    classDef verify fill:#F2D6D6,stroke:#B03030,color:#8A1F1F
+    classDef sim fill:#DDE3EC,stroke:#24324A,color:#24324A
+    classDef judge fill:#FFFFFF,stroke:#222,color:#222
+    classDef out fill:#D9E8DF,stroke:#2E6B45,color:#1F4D31
+    class H human
+    class L lead
+    class A,C,Y design
+    class V verify
+    class D sim
+    class J judge
+    class O out
+    style T fill:#FFFFFF,stroke:#9AA0A6
+```
+
+The human writes the request. The lead writes the spec (`spec.md`) from the request, and the human
+approves the spec. Then the specialists do the work in phases. A gate closes each phase. The judge
+does a check of each gate. If a gate fails, the lead sends each problem to the agent that owns the
+file. The agents share their work only through files in `team/`.
+
+## Requirements
+
+The harness and the agents obey these requirements.
+
+1. The spec gives each target as a number. The tools read the numbers from `spec.md`.
+2. A gate passes only on evidence in a file. A message from an agent is not evidence.
+3. The chip passes only when the post-layout response meets each target in the spec. DRC and LVS
+   alone are not sufficient.
+4. The judge does its own runs of the checks. The judge does not change the design.
+5. The calibration routine uses only measurements from the test station. It does not read the
+   errors of a die.
+6. The final check uses new random dies at each run. These dies are not the training dies.
+7. Only the owner of a file changes the file. No agent changes `spec.md` after the approval.
+   No agent changes `tools/`.
+8. The checks run on this computer. They do not use cloud simulations.
 
 ## Difference from `main`
 
-`main` and the device branches run **one agent on one device**: edit `design.py`, run FDTD, keep or
-discard. This branch runs **a team on a whole chip**, so the harness changes:
-
 | | `main` | `agent_team` |
 |---|---|---|
-| Agents | one | lead + architect, component, layout, judge (`.claude/agents/`) |
-| Unit of work | one device geometry | a chip: system, blocks, layout, calibration |
-| Shared memory | `journal.md`, `principles.md` | blackboard `team/`: targets, achieved, reviews, journal, lessons |
-| Pass/fail | one metric from FDTD | gates in `tools/verify.py`: build, DRC, LVS, nominal post-layout performance, blind virtual dies |
-| Simulation | Tidy3D FDTD in the cloud | PhotonForge circuit simulation, offline and free (FDTD only for a part with no model) |
-| Grading | the agent scores itself | an independent judge agent and frozen tools; calibration is tested on dies nobody has seen |
+| Agents | one agent | a lead and four specialists (`agents/`) |
+| Work | one device geometry | a full chip: system, blocks, layout, calibration |
+| Shared memory | `journal.md`, `principles.md` | files in `team/`: targets, achieved values, reviews, journal, lessons |
+| Pass or fail | one metric from FDTD | gates in `tools/verify.py`: build, DRC, LVS, nominal post-layout performance, blind virtual dies |
+| Simulation | Tidy3D FDTD in the cloud | PhotonForge circuit simulation on this computer (FDTD only for a part with no model) |
+| Score | the agent scores its own work | a judge agent and frozen tools score the work |
 
-## How it works
+## Use the agent team
 
-```
-spec.md + spec.yaml  (the human)
-        |
-   lead (program.md) ---- plan, brief, gate, report
-        |
-   P1 architect   -> targets per block          gate A: judge re-runs the system sim
-   P2 component   -> achieved per block         gate B: judge re-checks each block
-   P3 layout      -> design/chip.py             gate C: verify build, DRC, LVS
-   P4 architect   -> phase trims + tuning.py    verify nominal + training dies
-   P5 judge       -> full verify, 8 blind dies  final: verify ALL PASS + review PASS
-   P6 lead        -> output/REPORT.md
-```
+1. Make a Python environment and install the packages:
 
-**Why a judge and blind dies.** "DRC clean, LVS clean, the simulation runs" does not mean the chip
-works: our first reference lattice passed all three and was not a filter. The judge scores the
-response shape against the spec, reads the plots and the code, and the calibration routine runs on
-new random dies at every final check, so it cannot be tuned to the dies it has seen.
+   ```bash
+   python -m venv .venv && source .venv/bin/activate
+   pip install "photonforge>=2.0" tidy3d-extras pyyaml scipy matplotlib
+   pip install siphopdk-forge
+   ```
 
-**The virtual test station** (`tools/measure.py`) acts like a prober. Each die has an n_eff error on
-every waveguide piece (offset, gradient, local noise) and an error on every coupler, from the sigmas
-in `spec.yaml`. `calibrate(station)` sets heaters and reads noisy spectra, with a budget of 60
-measurements per die.
+2. Open a coding agent in this folder. The agent must have shell and Python access, and it must
+   support sub-agents. Give it a prompt with your request. For example:
 
-## Quick start
+   ```text
+   Follow program.md. Request: build a tunable 2-channel lattice filter in the O-band
+   with 5 nm channel spacing.
+   ```
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install "photonforge>=2.0" tidy3d-extras pyyaml scipy matplotlib
-pip install siphopdk-forge            # SiPhoPDK (internal wheel for now)
-claude "Follow the instructions in program.md and design the chip in spec.md"
-```
+3. The lead writes `spec.md` from the request. It shows a table of the targets and the default
+   values that it selected. Read the table. Approve the spec, or change the values.
+4. The team does the work. To see the progress, use these files:
+   - `python tools/team.py status`: the phases, the gates, and the last journal lines.
+   - `output/verify.png`: the spectra of the last check.
+   - `team/reviews/`: the decisions of the judge.
+5. At the end, read `output/REPORT.md`. The layout is in `design/chip.py`. The calibration routine
+   is in `design/tuning.py`.
 
-Watch it: `python tools/team.py status` (the board), `output/verify.png` (the latest check),
-`tools/view.py` (the layout in the LiveViewer).
+If you do not give a request, the lead uses the current `spec.md`.
 
-## Use it for another chip
+## Use the agent team for a different chip
 
-The harness does not know about lattices. A new chip needs only:
+The harness does not contain lattice-specific code. For a different chip:
 
-1. `spec.md` and `spec.yaml`: function, ports, targets (metrics from `tools/metrics.py`), variation.
-2. A metric in `tools/metrics.py` if the spec needs one that is not there.
-3. A PDK adapter `tools/pdks/<pdk>.py` (technology, cells, DRC, LVS, fast route models) for a new PDK.
+1. Give a different request. The lead writes a new `spec.md` (the template is `specs/lattice_demux_2ch.md`).
+2. If the spec needs a metric that `tools/metrics.py` does not have, add the metric function.
+3. If the chip uses a different PDK, add a PDK adapter `tools/pdks/<pdk>.py` (technology, cells,
+   DRC, LVS, models for route pieces).
 
-It fits passive and thermally tuned circuits with PDK models: ring filters, switch meshes, splitter
-trees, transceiver passives. Not yet: electro-optic modulators (charge and RF simulations), eye-diagram
-specs (a time-domain metric), and parts with no model (FDTD per part: FlexCredits and time).
+The harness is applicable to passive and thermally tuned circuits that have PDK models. Examples
+are ring filters, switch meshes, splitter trees, and transceiver passives. The harness does not
+support these chips yet: electro-optic modulators (they need charge and RF simulations), specs
+with eye diagrams (they need a time-domain metric), and parts with no model (they need FDTD for
+each part, which uses FlexCredits and time).
 
-## Project structure
+## Files
 
-| Path | Role |
+| Path | Function |
 |---|---|
-| `program.md` | the lead's instructions: phases, gates, rules |
-| `spec.md`, `spec.yaml` | what to build (words, numbers); only the human edits them |
-| `.claude/agents/` | `architect`, `component`, `layout`, `judge` |
-| `design/chip.py` | `build() -> pf.Component` (layout agent) |
-| `design/tuning.py` | `calibrate(station)` (architect) |
-| `design/components/` | new PCells, only when no PDK cell fits |
-| `team/` | blackboard: `plan.md`, `principles.md`, `targets/`, `achieved/`, `reviews/`, `journal.jsonl`, `LESSONS.md` |
+| `program.md` | instructions for the lead: phases, gates, rules |
+| `spec.md` | the request, the function, and the numbers that the tools read |
+| `specs/` | example specs (templates) |
+| `agents/` | instructions for the specialists: `architect`, `component`, `layout`, `judge` |
+| `design/chip.py` | `build()` returns the chip layout (owner: layout) |
+| `design/tuning.py` | `calibrate(station)` returns the heater settings (owner: architect) |
+| `design/components/` | new PCells, only if no PDK cell can do the function |
+| `team/` | shared files: plan, principles, targets, achieved values, reviews, journal, lessons |
 | `tools/verify.py` | the gates; writes `output/verify.json` and `output/verify.png` |
-| `tools/measure.py` | virtual test station (dies, heaters, noisy spectra) |
-| `tools/metrics.py` | metric library (channel, insertion loss, imbalance) |
-| `tools/routing.py` | LVS-safe optical routing (`route_auto` split per net) |
-| `tools/team.py` | journal, status board, cloud spend |
+| `tools/measure.py` | virtual test station: dies, heaters, measured spectra with noise |
+| `tools/spec_check.py` | checks the numbers in `spec.md` and prints the targets |
+| `tools/metrics.py` | metric functions |
+| `tools/routing.py` | optical routing that keeps LVS correct |
+| `tools/team.py` | journal, status of the phases, cloud cost |
 | `tools/pdks/siphopdk.py` | PDK adapter |
-| `tools/noclouds.py` | blocks cloud runs inside the checks |
+| `tools/noclouds.py` | stops cloud runs in the checks |
+| `tools/view.py` | shows the layout in the PhotonForge LiveViewer |

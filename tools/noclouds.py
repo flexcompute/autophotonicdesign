@@ -1,8 +1,8 @@
-"""Import first: any Tidy3D cloud submission raises instead of running, and mode solves run locally.
+"""Import this module first. It stops all Tidy3D cloud runs, and it makes mode solves run on this computer.
 
-verify.py and measure.py import this, so a check never spends FlexCredits by accident (for
-example a port mode solve, or a component without a cached result that falls back to FDTD).
-Design work that needs FDTD runs in its own script, without this import.
+verify.py and measure.py import this module. Thus a check does not use FlexCredits (for example,
+for a port mode solve, or for a component that has no stored result and starts an FDTD run).
+A design script that needs FDTD must not import this module.
 """
 
 import photonforge as _pf

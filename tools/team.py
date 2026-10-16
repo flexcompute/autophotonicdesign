@@ -1,9 +1,9 @@
-"""Blackboard helper: journal, status board, cloud spend.
+"""Shared files: journal, status of the phases, cloud cost.
 
-    python tools/team.py init                                     # once, before the first phase
+    python tools/team.py init                                     # one time, before the first phase
     python tools/team.py log --role architect --event decision --msg "dL 40/80 um: FSR 10 nm"
     python tools/team.py log --role component --event cloud --msg "DC gap sweep, 6 FDTD" --cost 0.42
-    python tools/team.py status                                   # phase board: targets, achieved, reviews, gates, journal
+    python tools/team.py status                                   # targets, achieved values, reviews, gates, journal
 
 Events: plan, decision, result, gate, review, fix, blocked, cloud, lesson, note.
 """

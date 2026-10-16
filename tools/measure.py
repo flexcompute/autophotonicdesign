@@ -1,14 +1,14 @@
-"""Virtual test station: measure the chip on a virtual die, with heater settings, like a prober.
+"""Virtual test station. It measures the chip on a virtual die with heater settings, as a prober does.
 
-A die is the drawn chip plus fabrication variation from spec.yaml: an n_eff error on every
-waveguide piece (whole-die offset + linear gradient across the die + local noise) and a scale
-error on every coupler's full-transfer length (gap variation). The station runs the
-post-layout circuit simulation with these errors and returns noisy power spectra in dB.
+A die is the drawn chip with the fabrication variation of spec.md: an n_eff error on each
+waveguide piece (offset of the full die, linear change across the die, and local noise), and an
+error of the full-transfer length of each coupler (gap variation). The station runs the
+post-layout circuit simulation with these errors. It gives the power spectra in dB, with noise.
 
-The team's calibration routine (design/tuning.py) gets only a handle: heater names,
-wavelengths, the heater limit and measure(). It cannot see the die's errors.
+The calibration routine (design/tuning.py) gets only a handle: the heater names, the wavelengths,
+the heater limit, and measure(). It cannot see the errors of the die.
 
-    python tools/measure.py --list                       # heaters and their positions
+    python tools/measure.py --list                       # the heaters and their positions
     python tools/measure.py --die 3 --set heater_1=10 heater_2=0 --plot output/die3.png
     python tools/measure.py --die nominal --plot output/nominal.png
 """
@@ -37,8 +37,13 @@ class MeasurementBudgetExceeded(RuntimeError):
 
 
 def load_spec(path=None) -> dict:
-    with open(path or os.path.join(ROOT, "spec.yaml")) as f:
-        return yaml.safe_load(f)
+    """Read the numbers of the spec: the first ```yaml block in spec.md."""
+    with open(path or os.path.join(ROOT, "spec.md")) as f:
+        text = f.read()
+    m = re.search(r"^```yaml\s*\n(.*?)^```", text, re.S | re.M)
+    if not m:
+        raise ValueError("spec.md has no ```yaml block with the numbers")
+    return yaml.safe_load(m.group(1))
 
 
 @dataclass

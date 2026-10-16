@@ -1,8 +1,8 @@
-"""Metrics library. spec.yaml picks a metric by `type` and gives its arguments and targets.
+"""Metric functions. Each metric in spec.md (numbers) gives a `type`, its arguments, and its targets.
 
-Every metric takes the wavelength grid (um) and the measured or simulated power transmission
-(linear) and returns a dict of named values. Add a new metric as a function plus an entry in
-METRICS; the rest of the harness does not change.
+Each metric function gets the wavelengths (um) and the power transmission (linear). It gives a
+dict of named values. To add a metric, write a function and add it to METRICS. The other tools
+do not change.
 """
 
 import numpy as np

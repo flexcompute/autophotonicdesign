@@ -1,12 +1,12 @@
-"""Routing helpers that keep LVS correct.
+"""Optical routing that keeps LVS correct.
 
-PhotonForge 2.0 LVS treats a component whose `parametric_function` starts with
-'photonforge.parametric.route' as ONE wire and joins all its ports into one net. A multi-net
-`pf.parametric.route_auto` call returns all nets in one such component, so LVS merges the nets.
-The nets inside it (one child per net) carry no `parametric_function`.
+PhotonForge 2.0 LVS sees a component whose `parametric_function` starts with
+'photonforge.parametric.route' as one wire. It connects all ports of that wire. One
+`pf.parametric.route_auto` call with many nets gives one such component. Thus LVS connects the nets.
+The child components (one for each net) have no `parametric_function`.
 
-`add_routes` adds each net as its own tagged wire. Route all nets in ONE `route_auto` call (it
-avoids collisions between them), then add the result with `add_routes`.
+`add_routes` adds each net as a separate wire. Route all nets with one `route_auto` call (the
+router then keeps the nets apart). Then add the result with `add_routes`, or use `route_nets`.
 """
 
 import photonforge as pf

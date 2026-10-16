@@ -1,20 +1,20 @@
 """Heater calibration. The architect owns this file.
 
-Contract (tools/verify.py calls it on the nominal die and on every blind virtual die):
-    calibrate(station) -> {heater_name: dT_in_K}
+Requirements (tools/verify.py calls this routine on the nominal die and on each blind virtual die):
+    calibrate(station) -> {heater_name: temperature rise in K}
 
 `station` is a tools.measure.StationHandle:
-    station.heaters            ["heater_1", "heater_2", ...]  sorted bottom to top, then left to right
-    station.heater_positions   {name: (x, y) um}
-    station.wavelengths        the measurement grid (um)
+    station.heaters            ["heater_1", "heater_2", ...], from bottom to top, then from left to right
+    station.heater_positions   {name: (x, y) in um}
+    station.wavelengths        the wavelengths of a measurement (um)
     station.paths              ["IN1->OUT1", ...]
-    station.max_dT             highest dT one heater accepts (K)
-    station.budget, .calls     measurement budget for this die, and calls used so far
-    station.measure(settings, wavelengths=None) -> {path: dB array}   (noisy, counts against the budget)
+    station.max_dT             the maximum temperature rise of one heater (K)
+    station.budget, .calls     the number of measurements permitted on this die, and the number used
+    station.measure(settings, wavelengths=None) -> {path: dB array}   (with noise; each call uses one measurement)
 
-The routine sees only measurements, like a prober. It must not read the die's errors, the spec's
-random seeds, or tools/ internals. Work it out on the nominal die and on the training dies
-(python tools/measure.py --die 0..19).
+The routine gets only measurements, as on a prober. It must not read the errors of a die, the
+seeds of the dies, or the internals of tools/. Develop it on the nominal die and on the training
+dies (python tools/measure.py --die 0..19).
 """
 
 

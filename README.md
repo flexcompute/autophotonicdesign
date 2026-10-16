@@ -1,113 +1,90 @@
-# Photonic Device Auto-Design Agent
+# Agent Team: Design a Whole Photonic Chip
 
-An autonomous photonic device design agent, inspired by Andrej Karpathy's
-[autoresearch](https://github.com/karpathy/autoresearch). Instead of a human
-manually tuning device geometry and running simulations, an LLM agent
-(e.g. Claude Code) takes over the design loop: it reads instructions and
-constraints from a Markdown file, modifies the device geometry in Python,
-visually verifies the layout, runs a fabrication design-rule check, submits
-FDTD simulations to Tidy3D's cloud solver, inspects the resulting field
-patterns, and decides whether to keep or discard each design — all without
-human intervention.
+A team of AI agents (Claude Code subagents) designs a complete photonic chip from a spec: system
+design, components, layout and routing, DRC and LVS, post-layout circuit simulation, and heater
+calibration on virtual dies. A lead agent plans and gates the work; four specialists do it.
 
-This repository holds the per-device design runs behind our paper on
-autonomous agentic photonic design (manuscript in preparation); see
-[Reproducing the paper](#reproducing-the-paper) below for the map from
-branches to paper sections.
+The demo chip is a two-channel heated MZI lattice demux on SiPhoPDK (O-band): flat-top pass bands
+at 1310 nm and 1315 nm, heaters that set the lattice phases and correct die-to-die variation.
 
-![schematic](schematic.svg)
+## Difference from `main`
 
-## How It Works
+`main` and the device branches run **one agent on one device**: edit `design.py`, run FDTD, keep or
+discard. This branch runs **a team on a whole chip**, so the harness changes:
 
-Before the loop, the agent does a one-time **literature review** of the
-target device class — common topologies, underlying physics, state-of-the-art
-metrics — and captures it in `output/principles.md` as a stable design
-reference.
+| | `main` | `agent_team` |
+|---|---|---|
+| Agents | one | lead + architect, component, layout, judge (`.claude/agents/`) |
+| Unit of work | one device geometry | a chip: system, blocks, layout, calibration |
+| Shared memory | `journal.md`, `principles.md` | blackboard `team/`: targets, achieved, reviews, journal, lessons |
+| Pass/fail | one metric from FDTD | gates in `tools/verify.py`: build, DRC, LVS, nominal post-layout performance, blind virtual dies |
+| Simulation | Tidy3D FDTD in the cloud | PhotonForge circuit simulation, offline and free (FDTD only for a part with no model) |
+| Grading | the agent scores itself | an independent judge agent and frozen tools; calibration is tested on dies nobody has seen |
 
-Each iteration then runs through a fixed loop:
+## How it works
 
 ```
-Explore → Design → Verify (DRC + preview) → Simulate → Log (keep/discard)
+spec.md + spec.yaml  (the human)
+        |
+   lead (program.md) ---- plan, brief, gate, report
+        |
+   P1 architect   -> targets per block          gate A: judge re-runs the system sim
+   P2 component   -> achieved per block         gate B: judge re-checks each block
+   P3 layout      -> design/chip.py             gate C: verify build, DRC, LVS
+   P4 architect   -> phase trims + tuning.py    verify nominal + training dies
+   P5 judge       -> full verify, 8 blind dies  final: verify ALL PASS + review PASS
+   P6 lead        -> output/REPORT.md
 ```
 
-Long-term memory spans two files: `output/principles.md` holds the literature
-review, and `output/journal.md` logs each experiment's hypothesis and lesson.
-Together they let the agent learn from both successes and failures and avoid
-repeating dead ends. The human's job is to define the problem (device type,
-constraints, target metric) in `program.md`; the agent does the engineering.
+**Why a judge and blind dies.** "DRC clean, LVS clean, the simulation runs" does not mean the chip
+works: our first reference lattice passed all three and was not a filter. The judge scores the
+response shape against the spec, reads the plots and the code, and the calibration routine runs on
+new random dies at every final check, so it cannot be tuned to the dies it has seen.
 
-## Reproducing the paper
+**The virtual test station** (`tools/measure.py`) acts like a prober. Each die has an n_eff error on
+every waveguide piece (offset, gradient, local noise) and an error on every coupler, from the sigmas
+in `spec.yaml`. `calibrate(station)` sets heaters and reads noisy spectra, with a budget of 60
+measurements per die.
 
-`main` is the device-agnostic framework. Each demonstration in the paper was
-run on its own branch; check out the branch to get that device's `program.md`,
-`design.py`, run journal (`output/journal.md`), and best design.
-
-| Branch | Paper § | Device | Headline result |
-|--------|---------|--------|------------------|
-| [`bend`](../../tree/bend) | 3.1 | SiN 90° bend, R = 12 µm | 0.109 dB (97.51% transmission) |
-| [`1x2splitter`](../../tree/1x2splitter) | 3.1 | SOI 1×2 splitter | 0.015 dB insertion loss |
-| [`taper`](../../tree/taper) | 3.1 | SOI taper, 6 µm | 0.114 dB |
-| [`grating_coupler`](../../tree/grating_coupler) | 3.1 | SOI focused grating coupler | 2.89 dB peak coupling loss |
-| [`crossing`](../../tree/crossing) | 3.1 | SOI waveguide crossing | 0.11 dB insertion loss |
-| [`pn_modulator`](../../tree/pn_modulator) | 3.2 | Si microring modulator (lateral PN) | VπL·Cj ≈ 4.4 V·pF |
-| [`rf_transmission_lines`](../../tree/rf_transmission_lines) | 3.3 | Segmented slow-wave CPW electrode | Z₀ ≈ 43–44 Ω; α₀ ≈ 0.29–0.36 (dB/cm/√GHz) |
-| [`routing`](../../tree/routing) | 3.4 | Electrical routing, 32 nets | 192 → 0 DRC violations |
-
-The [`edge_coupler`](../../tree/edge_coupler) branch is an additional device not reported in the paper.
-
-
-## Project Structure
-
-| File | Role |
-|------|------|
-| `program.md` | Agent instructions, constraints, loop rules |
-| `design.py` | Device geometry (the only file the agent modifies) |
-| `simulate.py` | Runs Tidy3D FDTD simulation, extracts metric, plots fields |
-| `preview.py` | Generates geometry preview for visual inspection |
-| `drc.py` | Fabrication rule check via KLayout |
-| `orchestrate.py` | Post-simulation bookkeeping: parses run log, updates TSV/journal, handles keep/discard |
-| `output/` | All generated files (principles, logs, plots, journal, best design) |
-
-## Setup
-
-Python 3.10+.
+## Quick start
 
 ```bash
-pip install tidy3d numpy matplotlib klayout
-tidy3d configure --apikey=YOUR_API_KEY
+python -m venv .venv && source .venv/bin/activate
+pip install "photonforge>=2.0" tidy3d-extras pyyaml scipy matplotlib
+pip install siphopdk-forge            # SiPhoPDK (internal wheel for now)
+claude "Follow the instructions in program.md and design the chip in spec.md"
 ```
 
-Tidy3D is a paid cloud FDTD service; get an API key at
-[tidy3d.simulation.cloud](https://tidy3d.simulation.cloud). The `routing` branch
-additionally uses [PhotonForge](https://www.flexcompute.com/photonforge/) (a
-Flexcompute product) for layout; the passive and active EM runs need only the
-packages above.
+Watch it: `python tools/team.py status` (the board), `output/verify.png` (the latest check),
+`tools/view.py` (the layout in the LiveViewer).
 
-## Running
+## Use it for another chip
 
-Point Claude Code (or any compatible LLM agent with shell + Python
-execution) at `program.md`:
+The harness does not know about lattices. A new chip needs only:
 
-```bash
-claude "Follow the instructions in program.md and start designing!"
-```
+1. `spec.md` and `spec.yaml`: function, ports, targets (metrics from `tools/metrics.py`), variation.
+2. A metric in `tools/metrics.py` if the spec needs one that is not there.
+3. A PDK adapter `tools/pdks/<pdk>.py` (technology, cells, DRC, LVS, fast route models) for a new PDK.
 
-The agent will run the loop for the number of experiments specified in
-`program.md` (default: 50). Watch progress in `output/journal.md` and
-`output/results.tsv`.
+It fits passive and thermally tuned circuits with PDK models: ring filters, switch meshes, splitter
+trees, transceiver passives. Not yet: electro-optic modulators (charge and RF simulations), eye-diagram
+specs (a time-domain metric), and parts with no model (FDTD per part: FlexCredits and time).
 
-## Customizing for a Different Device
+## Project structure
 
-To adapt this framework to a new photonic device:
-
-1. Edit `program.md` — describe the target device, metric, and constraints.
-2. Edit `design.py` — update the initial geometry and the `evaluate()`
-   function that computes the target metric from simulation data.
-3. The rest of the infrastructure (`simulate.py`, `preview.py`, `drc.py`,
-   `orchestrate.py`) is device-agnostic and does not need to change.
-
-## Credits
-
-Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
-Built on [Tidy3D](https://www.flexcompute.com/tidy3d/) for FDTD simulation
-and [KLayout](https://www.klayout.de/) for DRC.
+| Path | Role |
+|---|---|
+| `program.md` | the lead's instructions: phases, gates, rules |
+| `spec.md`, `spec.yaml` | what to build (words, numbers); only the human edits them |
+| `.claude/agents/` | `architect`, `component`, `layout`, `judge` |
+| `design/chip.py` | `build() -> pf.Component` (layout agent) |
+| `design/tuning.py` | `calibrate(station)` (architect) |
+| `design/components/` | new PCells, only when no PDK cell fits |
+| `team/` | blackboard: `plan.md`, `principles.md`, `targets/`, `achieved/`, `reviews/`, `journal.jsonl`, `LESSONS.md` |
+| `tools/verify.py` | the gates; writes `output/verify.json` and `output/verify.png` |
+| `tools/measure.py` | virtual test station (dies, heaters, noisy spectra) |
+| `tools/metrics.py` | metric library (channel, insertion loss, imbalance) |
+| `tools/routing.py` | LVS-safe optical routing (`route_auto` split per net) |
+| `tools/team.py` | journal, status board, cloud spend |
+| `tools/pdks/siphopdk.py` | PDK adapter |
+| `tools/noclouds.py` | blocks cloud runs inside the checks |

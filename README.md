@@ -86,7 +86,7 @@ The harness and the agents obey these requirements.
    ```bash
    python -m venv .venv && source .venv/bin/activate
    pip install "photonforge>=2.0" tidy3d-extras pyyaml scipy matplotlib
-   pip install siphopdk-forge
+   pip install <path>/siphopdk_forge-1.0.0-py3-none-any.whl   # SiPhoPDK is not on PyPI yet
    ```
 
 2. Open a coding agent in this folder. The agent must have shell and Python access, and it must

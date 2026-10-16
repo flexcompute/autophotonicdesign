@@ -37,3 +37,7 @@ Versions: PhotonForge 2.0.0, SiPhoPDK 1.0.0.
     a 2 pi change needs approximately 70 K. A heater only adds phase. A phase change "below zero" needs almost 2 pi.
 11. Grating coupler: data model with 1.3 dB loss at the peak (1310 nm), 20 nm 1-dB bandwidth, and
     -25 dB back-reflection. At 1315 nm, the loss is approximately 0.2 dB higher for each coupler.
+12. Add a `FLOORPLAN` rectangle that encloses all shapes of the chip. Reason: SiPhoPDK DRC rule FP.1
+    gives a violation for each shape outside the floorplan.
+13. Do not give `straight_kwargs` or `bend_kwargs` to `route_auto` (it does not accept them).
+    `pdk.fast_models(chip)` at the end of `build()` gives the models to the route pieces.

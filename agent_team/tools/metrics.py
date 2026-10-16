@@ -1,8 +1,8 @@
-"""Metric functions. Each metric in spec.md (numbers) gives a `type`, its arguments, and its targets.
+"""Metrics library. spec.md picks a metric by `type` and gives its arguments and targets.
 
-Each metric function gets the wavelengths (um) and the power transmission (linear). It gives a
-dict of named values. To add a metric, write a function and add it to METRICS. The other tools
-do not change.
+Every metric takes the wavelength grid (um) and the measured or simulated power transmission
+(linear) and returns a dict of named values. Add a new metric as a function plus an entry in
+METRICS; the rest of the harness does not change.
 """
 
 import numpy as np
@@ -50,7 +50,7 @@ def insertion_loss(wl, t, *, band=None):
 
 
 def imbalance(wl, t, *, other, band=None):
-    """Worst |t - other| in dB over `band` (for splitters). `other` is the second path's transmission."""
+    """Worst |t - other| in dB over `band` (for splitters). In the spec, give `other_path: [IN, OUT]`."""
     wl = np.asarray(wl, float)
     m = np.ones_like(wl, bool) if band is None else (wl >= band[0]) & (wl <= band[1])
     return {"imbalance_db": float(np.max(np.abs(db(t)[m] - db(other)[m])))}

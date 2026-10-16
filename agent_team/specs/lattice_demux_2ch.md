@@ -46,7 +46,8 @@ simulation:
   points: 401
   paths: [[IN1, OUT1], [IN1, OUT2]] # (input, output) pairs that the test station measures
 
-heaters:
+tuning:                             # optional: delete this section for a chip with no tuning elements
+  type: thermal                     # heaters (thermo-optic phase shifters)
   max_dT: 75.0                      # K, maximum temperature rise of one heater
   nominal_total_dT_max: 20.0        # K, maximum sum of the heater rises on the nominal die
 
@@ -66,7 +67,7 @@ metrics:                            # each metric runs on the nominal die and on
 
 variation:                          # virtual dies in tools/measure.py; values are one standard deviation
   dies: 8                           # blind dies in the final check (new random dies at each run)
-  pass_fraction: 0.75               # fraction of blind dies that must meet all 'die' targets after calibrate()
+  pass_fraction: 0.75               # fraction of blind dies that must meet all 'die' targets (after calibrate(), if the chip has tuning)
   training_dies: 20                 # dies 0 to 19: the team can use them for development
   n_eff:
     global: 0.003                   # offset of the full die (film thickness, mean width)

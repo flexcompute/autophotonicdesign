@@ -1,7 +1,7 @@
-"""PDK adapter for SiPhoPDK (a synthetic 220 nm SOI and SiN platform for the O-band).
+"""PDK adapter for SiPhoPDK (synthetic 220 nm SOI + SiN platform, O-band).
 
-There is one adapter for each PDK. spec.md gives the name of the adapter (`pdk: siphopdk`). The
-other tools use only the functions in this file. A new PDK needs a new file with the same names.
+One adapter per PDK. `spec.md` names the adapter (`pdk: siphopdk`). The rest of the harness
+uses only the functions below, so a new PDK needs a new file with the same names.
 """
 
 import photonforge as pf

@@ -1,4 +1,4 @@
-"""Show design/chip.py in the PhotonForge LiveViewer (http://localhost:8765). After a change to the code, start it again.
+"""Show design/chip.py in the PhotonForge LiveViewer (http://localhost:8765). Restart after a code change.
 
     lsof -ti:8765 | xargs kill -9; python tools/view.py &      # then open http://localhost:8765
 """

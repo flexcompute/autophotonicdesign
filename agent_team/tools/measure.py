@@ -1,14 +1,14 @@
-"""Virtual test station. It measures the chip on a virtual die with heater settings, as a prober does.
+"""Virtual test station: measure the chip on a virtual die, with heater settings, like a prober.
 
-A die is the drawn chip with the fabrication variation of spec.md: an n_eff error on each
-waveguide piece (offset of the full die, linear change across the die, and local noise), and an
-error of the full-transfer length of each coupler (gap variation). The station runs the
-post-layout circuit simulation with these errors. It gives the power spectra in dB, with noise.
+A die is the drawn chip plus fabrication variation from spec.md: an n_eff error on every
+waveguide piece (whole-die offset + linear gradient across the die + local noise) and a scale
+error on every coupler's full-transfer length (gap variation). The station runs the
+post-layout circuit simulation with these errors and returns noisy power spectra in dB.
 
-The calibration routine (design/tuning.py) gets only a handle: the heater names, the wavelengths,
-the heater limit, and measure(). It cannot see the errors of the die.
+The team's calibration routine (design/tuning.py) gets only a handle: heater names,
+wavelengths, the heater limit and measure(). It cannot see the die's errors.
 
-    python tools/measure.py --list                       # the heaters and their positions
+    python tools/measure.py --list                       # heaters and their positions
     python tools/measure.py --die 3 --set heater_1=10 heater_2=0 --plot output/die3.png
     python tools/measure.py --die nominal --plot output/nominal.png
 """
@@ -110,7 +110,8 @@ class Station:
         sim = self.spec["simulation"]
         self.wavelengths = np.linspace(*sim["band"], int(sim["points"]))
         self.paths = [tuple(p) for p in sim["paths"]]
-        self.max_dT = float(self.spec["heaters"]["max_dT"])
+        self.tuning = self.spec.get("tuning") or {}       # optional: only for chips with tuning elements
+        self.max_dT = float(self.tuning.get("max_dT", 0.0))
         m = self.spec.get("measurement", {})
         self.noise_db = float(m.get("noise_db", 0.0)) if noise else 0.0
         self.floor = 10 ** (float(m.get("floor_db", -60.0)) / 10)
@@ -152,6 +153,8 @@ class Station:
     # ---- measurement ---------------------------------------------------------------------
     def _updates(self, settings: dict) -> dict:
         up = {k: {"model_updates": dict(v["model_updates"])} for k, v in self._base.items()}
+        if settings and not self.tuning:
+            raise ValueError("spec.md has no tuning section, so the station accepts no settings")
         for name, dT in (settings or {}).items():
             if name not in self.heaters:
                 raise KeyError(f"unknown heater '{name}'; heaters: {list(self.heaters)}")
@@ -224,8 +227,9 @@ def main():
     ap.add_argument("--set", nargs="*", default=[], help="heater_1=12.5 heater_2=0 ...")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--plot", default=None)
+    ap.add_argument("--spec", default=None, help="spec file (default spec.md)")
     a = ap.parse_args()
-    spec = load_spec()
+    spec = load_spec(a.spec)
     die = a.die if a.die == "nominal" else int(a.die)
     if die != "nominal" and not 0 <= die < int(spec["variation"]["training_dies"]):
         sys.exit(f"training dies are 0..{spec['variation']['training_dies'] - 1}")

@@ -23,7 +23,6 @@ REQUIRED = {
     "name": None, "pdk": None,
     "layout": ["max_size", "optical_ports"],
     "simulation": ["band", "points", "paths"],
-    "heaters": ["max_dT", "nominal_total_dT_max"],
     "metrics": None,
     "variation": ["dies", "pass_fraction", "training_dies", "n_eff", "coupler_length_scale"],
     "measurement": ["budget_per_die", "noise_db", "floor_db"],
@@ -54,7 +53,13 @@ def problems(spec: dict) -> list[str]:
         if tuple(m.get("path", ())) not in paths:
             out.append(f"{name}: path {m.get('path')} is not in simulation.paths")
         try:
-            keys = set(METRICS[m["type"]](wl, np.full(wl.size, 0.5), **m.get("args", {})))
+            args = dict(m.get("args", {}))
+            if "other_path" in args:
+                if tuple(args["other_path"]) not in paths:
+                    out.append(f"{name}: other_path {args['other_path']} is not in simulation.paths")
+                args.pop("other_path")
+                args["other"] = np.full(wl.size, 0.5)
+            keys = set(METRICS[m["type"]](wl, np.full(wl.size, 0.5), **args))
         except Exception as e:
             out.append(f"{name}: args do not work with '{m['type']}': {e}")
             continue
@@ -67,6 +72,8 @@ def problems(spec: dict) -> list[str]:
         c = m.get("args", {}).get("center")
         if c is not None and not lo <= c <= hi:
             out.append(f"{name}: center {c} is outside the band {lo}..{hi}")
+    if spec.get("tuning") and "max_dT" not in spec["tuning"]:
+        out.append("missing 'tuning.max_dT'")
     if not 0 < spec["variation"]["pass_fraction"] <= 1:
         out.append("variation.pass_fraction must be in (0, 1]")
     return out
@@ -80,8 +87,12 @@ def table(spec: dict) -> str:
         for k in keys:
             rows.append(f"| {m['name']} | {'->'.join(m['path'])} | {k} | {fmt((m.get('nominal') or {}).get(k, {})) or '-'} "
                         f"| {fmt((m.get('die') or {}).get(k, {})) or '-'} |")
-    v, h = spec["variation"], spec["heaters"]
-    rows += ["", f"Heaters: at most {h['max_dT']} K each; sum on the nominal die at most {h['nominal_total_dT_max']} K.",
+    v, h = spec["variation"], spec.get("tuning")
+    rows += [""]
+    if h:
+        rows += [f"Tuning ({h.get('type', 'thermal')}): at most {h['max_dT']} K for each element; "
+                 f"sum on the nominal die at most {h.get('nominal_total_dT_max', '-')} K."]
+    rows += [
              f"Dies: {v['dies']} blind dies, {v['pass_fraction']:.0%} must pass; {spec['measurement']['budget_per_die']} "
              f"measurements per die. Variation: n_eff {v['n_eff']}, coupler length scale {v['coupler_length_scale']}.",
              f"Layout: max {spec['layout']['max_size']} um, ports {spec['layout']['optical_ports']}, PDK {spec['pdk']}."]

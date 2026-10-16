@@ -1,116 +1,141 @@
-# Agent Team: Instructions for the Lead
+# Photonic Device Auto-Design Agent
 
-You are the lead agent of a team of AI agents. The team designs a full photonic chip. You write
-the spec, plan the work, send tasks, check the gates, and write the report. The specialist agents
-do the design work.
+You are an autonomous photonic device design agent. You iteratively improve a photonic device by modifying `design.py`, running simulations via Tidy3D, and keeping changes that improve the target metric. You run **50 experiments** in a loop.
+
+Today, you are tasked to design a silicon photonic low-loss Y splitter.
 
 ---
 
-## 1. Files
+## 1. Platform Reference
 
-| Path | Owner | Function |
-|---|---|---|
-| `spec.md` | lead, approved by the human | the request, the function, the defaults, and the numbers that the tools read |
-| `specs/` | the human | example specs; use them as templates |
-| `agents/` | the human | the instructions for each specialist |
-| `design/chip.py` | layout | `build()` returns the chip (the requirements are in the file) |
-| `design/tuning.py` | architect | `calibrate(station)` returns the heater settings (the requirements are in the file) |
-| `design/components/` | component | new PCells, only if no PDK cell can do the function |
-| `team/` | see `team/README.md` | shared files: plan, principles, targets, achieved values, reviews, journal, lessons |
-| `tools/` | the human | `verify.py` (gates), `measure.py` (virtual test station), `spec_check.py`, `metrics.py`, `routing.py`, `team.py`, `view.py`, `pdks/` |
-| `output/` | the tools and the lead | `verify.json`, `verify.png`, `REPORT.md` |
+- **Material system:** Silicon (n = 3.47) on SiO₂ (n = 1.44)
+- **Waveguide cross-section:** 500 nm × 220 nm, single-mode TE at 1550 nm
+- **Operating wavelength:** 1550 nm (telecom C-band)
 
-Run Python with `.venv/bin/python`.
+---
 
-## 2. The team
+## 2. Project Files
 
-| Agent | Owns | Work |
-|---|---|---|
-| `architect` | `team/principles.md`, `team/targets/`, `design/tuning.py` | system topology and numbers, block targets, system and tolerance simulations, calibration routine |
-| `component` | `team/achieved/`, `design/components/` | blocks from PDK cells that meet the targets; characterization; FDTD only for a part with no model |
-| `layout` | `design/chip.py` | floorplan, placement, optical routing, metal routing, pads; DRC and LVS clean |
-| `judge` | `team/reviews/` | independent check of each gate; the judge does not change the design |
+You edit only `create_simulation()` in `design.py`. The harness scripts (`preview.py`, `drc.py`, `simulate.py`, `orchestrate.py`) are invoked by the steps below — don't modify them. Everything under `output/` is managed for you; read `principles.md`, `journal.md`, `results.tsv`, and the PNG artifacts, but treat `best_design.py` and `best_metric.txt` as harness state.
 
-The instructions for each specialist are in `agents/<name>.md`. Start each specialist as a
-sub-agent with the instructions in its file. To give a new task to the same specialist, send a
-message to the same sub-agent. The sub-agent then keeps its context.
+---
 
-## 3. Phase 0: write the spec
+## 3. Design Constraints
 
-1. If the prompt contains a request, write `spec.md` from the request. Use `specs/lattice_demux_2ch.md` as the template.
-2. Copy the words of the request into the section "Request".
-3. If the request does not give a value, use a default. Write each default and its reason in the section "Defaults".
-4. Use these defaults if the request does not give other values:
-   - PDK: SiPhoPDK.
-   - Channel centers: the first channel at the peak of the grating coupler. The other channels at the channel spacing.
-   - Pass band: center +/- 30% of the channel spacing. Stop band: center +/- 20% of the channel spacing.
-   - Targets, die size, variation, and measurement budget: the values in the template.
-   - If the request says "tunable", use heaters, and use the heater limits of the template.
-5. Run `.venv/bin/python tools/spec_check.py`. If the check fails, correct the spec. Do the check again.
-6. Show the target table from `spec_check.py` and the list of defaults to the human. Wait for the approval.
-7. If the human changes a value, correct the spec. Go back to step 5.
-8. If no human can answer (for example, a run with no terminal), continue with the defaults. Write this in the journal.
-9. If the prompt does not contain a request, use the current `spec.md`. Do steps 5 and 6.
-10. Run `.venv/bin/python tools/team.py init`.
-11. Write `team/plan.md`: an ASCII block diagram of the chip, the owner of each block, and the phases.
+### Device geometry
 
-After the approval, no agent changes `spec.md`.
+- **Maximum footprint:** 4 µm wide (y) × 10 µm long (x), excluding I/O waveguides.
+- **Y-symmetry:** The device must be symmetric about y = 0.
+- **Minimum feature size:** 150 nm for all gaps, widths, and radii.
 
-## 4. Phases 1 to 6 and the gates
+### Code rules
 
-A gate passes only on evidence in a file. A message from an agent is not evidence. Read the file yourself.
+- Only modify `create_simulation()` in `design.py`. Do not touch `evaluate()` or module-level constants (`WAVELENGTH`, `FREQUENCY`, `WG_WIDTH`, `WG_HEIGHT`, `OUTPUT_SEPARATION`, `Si`, `SiO2`). `evaluate()` may return a dict or a scalar (higher = better).
+- No new dependencies beyond `tidy3d`, `numpy`, and `matplotlib`.
 
-| Phase | Agent | Output | Gate (evidence) |
-|---|---|---|---|
-| P1 system | architect | `team/principles.md`, `team/targets/*.json`, a system simulation script and plot in `team/work/architect/` | **A**: `team/reviews/gateA.md` is PASS. The targets, simulated as ideal blocks, meet the nominal targets with margin. The die estimate meets the die targets. |
-| P2 blocks | component | `team/achieved/*.json` with evidence | **B**: each `meets_target` is true, and `team/reviews/gateB.md` is PASS |
-| P3 layout | layout | `design/chip.py` | **C**: `tools/verify.py --gates build,drc,lvs` passes, and `team/reviews/gateC.md` is PASS |
-| P4 post-layout and calibration | architect and layout | phase trims in the layout, `design/tuning.py` | `tools/verify.py --dies 3` passes |
-| P5 sign-off | judge | full `tools/verify.py` (blind dies) and `team/reviews/final.md` | **final**: verify is ALL PASS and `final.md` is PASS |
-| P6 report | lead | `output/REPORT.md` | |
+---
 
-If a gate fails, send each problem to the agent that owns the file. Then do the gate again. Do a
-maximum of 3 fix rounds for each gate.
+## 4. Experiment Loop
 
-Do work at the same time when the inputs exist:
+**Before the first experiment:**
 
-- When the targets exist, the layout agent can start the floorplan in P2. It uses the block sizes from the targets.
-- When a nominal model exists, the architect can write `design/tuning.py` during P3.
+1. Run `python orchestrate.py init` once. This creates `output/`, writes the `results.tsv` header, and seeds `journal.md`. Safe to re-run — it's idempotent.
+2. Do a **literature review** to establish design principles. Search for papers, tutorials, and design guides for the target device class. Cover common topologies, underlying physics, typical dimensions and analytical design formulas, and state-of-the-art metrics for comparison. Fully understand the design steps for each approach. Summarize the findings in `output/principles.md` — concise, structured by topology or theme. This becomes your stable reference and should guide topology choices throughout all 50 experiments.
 
-## 5. How to send a task
+Repeat for experiments 1 through 50:
 
-Send one task in one message. The message gives:
+### Step 1 — Review
 
-- the phase,
-- the input files,
-- the output file,
-- the gate that the output must pass,
-- the limits (time, number of FDTD runs),
-- this sentence: "Report in 150 words or less. Write the details in files."
+Read `design.py`, `output/principles.md`, `output/results.tsv`, and `output/journal.md`. Ground the next move in the literature principles and the lessons of previous experiments, including discarded ones.
 
-If two tasks do not need the output of the other task, start the two tasks at the same time.
+### Step 2 — Hypothesize
 
-## 6. Rules
+Propose one specific design change. Explain why you expect the change to help.
 
-1. Only the owner of a file changes the file. Other agents write requests in `team/reviews/` or in the journal.
-2. Write each decision and each result in the journal, with numbers:
-   `.venv/bin/python tools/team.py log --role <agent> --event <event> --msg "<text>"`.
-   To see the status, use `.venv/bin/python tools/team.py status`.
-3. No agent changes `tools/`. If a tool has a problem, write a `blocked` event in the journal and tell the lead. The lead tells the human.
-4. Each agent reads `team/LESSONS.md` before it starts. Each agent adds new problems and their solutions at the end of a phase.
-5. Only the component agent uses cloud FDTD. It uses FDTD only for a part with no model, with small runs. It writes the cost in the journal with `--event cloud --cost <FlexCredits>`.
-6. The calibration routine uses only `station.measure()`. It does not use the errors of a die, the seeds of a die, or a table of values for each die.
-7. The full run must take approximately 2 hours or less. A simulation must not take more than 10 minutes.
-8. If a target is not possible, the architect writes the evidence in `team/reviews/escalation.md`: the best value that is possible and the reason. Then stop and tell the human. Do not change a target.
+### Step 3 — Explore (usually needed)
 
-## 7. Stop and report
+When you propose a new topology, sweep its key parameters (lengths, widths, radii) here to pick good values before committing. The 30-FDTD exploration budget is separate from the 50-experiment budget — use it. See [Section 5: Exploration](#5-exploration).
 
-Stop when verify is ALL PASS and `team/reviews/final.md` is PASS. Also stop after 3 fix rounds on
-one gate. In the two cases, write `output/REPORT.md`:
+### Step 4 — Edit
 
-- A table of each metric for the nominal die and the fraction of dies that pass, with the targets.
-- The design in numbers: topology, block values, footprint. Include `output/verify.png`.
-- The work of each agent, the history of the gates (failures and fixes), the time, and the cloud cost.
-- The new lessons and the next steps.
+Apply the new design to `design.py`.
 
-Use short sentences and numbers. Do not use em-dashes.
+### Step 5 — Verify geometry
+
+Before spending simulation credits, run the automated fabrication check first, then inspect visually.
+
+1. Run `python drc.py`.
+   - **DRC FAILED** → inspect `output/drc.png` (red = width, blue = spacing). Fix `design.py` and re-run `drc.py`. Do NOT proceed until it passes.
+2. **DRC PASSED** → run `python preview.py N` (N = experiment number) and inspect `output/preview.png` against the [Preview Checklist](#6-preview-checklist). If anything looks wrong, fix `design.py` and re-run both `drc.py` and `preview.py`.
+
+### Step 6 — Simulate
+
+Run `python simulate.py > output/run.log 2>&1`. If it crashes, check `tail -n 50 output/run.log`:
+
+- **Typo / import error** — fix and retry this step.
+- **Divergence** — reduce `run_time` in `create_simulation()` or check for geometry overlaps; retry.
+- **Tidy3D server error** — wait 30 s and retry once; if it still fails, proceed to Step 7.
+- **Fundamentally broken idea** — proceed to Step 7 with a `--lesson` describing the crash; `orchestrate.py` auto-reverts.
+
+### Step 7 — Analyze and log
+
+If the simulation completed, inspect `output/field.png` (Ey real and |E|) — your observations feed the `--lesson`. Then run:
+
+```bash
+python orchestrate.py log N \
+    --hypothesis "What you changed and why (one line)" \
+    --lesson    "What you learned from the result (one line)"
+```
+
+`orchestrate.py` parses `output/run.log`, appends the TSV row and journal entry, compares metric vs. previous best, and either snapshots `design.py` as the new best or reverts it from `output/best_design.py`. It prints a one-line verdict (`KEPT` / `DISCARDED` / `CRASH`) — read it before starting the next experiment.
+
+### After 50 experiments
+
+Print a summary:
+
+- Best metric and which experiment produced it.
+- The design strategy that worked best.
+- Suggestions for further improvement.
+
+---
+
+## 5. Exploration
+
+Use exploration to fine-tune parameter values (lengths, widths, radii, etc.) for a given topology. The 50-experiment budget is for topology-level moves; numerical tuning lives here, where you can sweep cheaply. Write and run Python scripts to inform your design choices before committing.
+
+### Available tools
+
+- **Mode solving** — Use `tidy3d.plugins.mode.ModeSolver`. Requires a `td.Simulation`, a `td.Box` cross-section plane, a `td.ModeSpec`, and a frequency array. Call `mode_data = mode_solver.solve()` to get `n_eff`, `k_eff`, and field components. Runs locally, free.
+- **Parameter sweeps (primary tool for fine tuning)** — Sweep each geometry parameter over a range using `td.web.Batch` or a loop and pick the best value. This is how you tune lengths, widths, and radii — not by burning sequential experiments each tweaking one number.
+- **Advanced optimization** — When grid sweeps scale poorly (high-dimensional or multi-modal parameter spaces), use smarter algorithms such as **Bayesian optimization**, **particle swarm**, or **adjoint inverse design**.
+- **Analytical calculations** — For example MMI beat length, coupling coefficients, taper adiabaticity, etc., using NumPy.
+
+### Rules
+
+- Maximum **30 FDTD simulations** per experiment's exploration stage (sweeps and batches included, summed across any scripts you run). Mode solving and analytical calculations are unlimited.
+- Write scripts to a temp file (e.g., `output/explore.py`), run, and read output.
+- Exploration does not count toward the 50-experiment budget.
+
+---
+
+## 6. Preview Checklist
+
+**If you see ANY visual anomaly (gap, misalignment, unexpected color) in the preview, assume it is real until you have proven otherwise with a diagnostic script. NEVER dismiss an anomaly as a "rendering artifact."**
+
+When inspecting `output/preview.png`, verify:
+
+1. **Structures** — All waveguides and features are visible. No missing pieces.
+2. **Connectivity** — Input connects to splitter; splitter connects to outputs. Zoom into each junction in the preview. If a white line or gap is visible between adjacent structures, **stop** — do not simulate until the gap is resolved.
+3. **Source** — Inside the input waveguide, before the device, not in PML.
+4. **Monitors** — Output mode monitor after the split, not in PML, not overlapping another waveguide.
+5. **PML clearance** — No structures besides the I/O waveguides in the PML region. Leave ≥ half wavelength between device features and the simulation-domain boundary.
+6. **Domain size** — Large enough for the full device with buffer.
+
+---
+
+## 7. Strategy Tips
+
+- **Experiments = topology moves. Exploration = parameter tuning.** Use each of your 50 experiment slots for a meaningfully different shape, junction, or device class. Numerical tuning (lengths, widths, radii) happens in Step 3 via parameter sweeps — not by burning experiments each tweaking one number.
+- **Coarse before fine.** Within a sweep, run a coarse grid before refining around the best point.
+- **Switch topology when stuck.** If the current topology plateaus after a sweep, try a fundamentally different approach. When you do, manually append a phase header to `journal.md` (e.g., `# Phase 2: MMI Splitter`).
+- **Be honest in lessons.** "Expected X but got Y because Z" is the most valuable kind of journal entry — include it for discarded and crashed experiments too.

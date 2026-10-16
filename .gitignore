@@ -23,7 +23,3 @@ Thumbs.db
 
 # Simulation data
 *.hdf5
-
-# agent_team run outputs
-output/
-team/work/

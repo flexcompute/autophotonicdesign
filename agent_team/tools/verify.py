@@ -1,18 +1,18 @@
-"""The gates. This script builds design/chip.py, does the checks, and compares the result with spec.md.
+"""The gates. Builds design/chip.py, checks it, and scores it against spec.md.
 
-    python tools/verify.py                       # all gates, with the number of blind dies in spec.md
-    python tools/verify.py --gates build,drc,lvs # only the layout gates (fast)
-    python tools/verify.py --dies 2              # fewer blind dies during development
-    python tools/verify.py --seeds 123 456       # the same dies again (to repeat a failure)
+    python tools/verify.py                       # all gates, blind dies from spec.md
+    python tools/verify.py --gates build,drc,lvs # layout gates only (fast)
+    python tools/verify.py --dies 2              # fewer blind dies while iterating
+    python tools/verify.py --seeds 123 456       # re-run given dies (to reproduce a failure)
 
-The gates, in sequence. If a gate fails, the script does not do the gates that follow:
-  build    build() in design/chip.py gives a component with the ports, heater terminals, and size of the spec
-  drc      the DRC rules of the PDK: 0 violations
-  lvs      the LVS of the PDK: the layout agrees with the netlist
-  nominal  calibrate() on the nominal die; the post-layout circuit simulation meets the 'nominal' targets
-  dies     calibrate() on blind virtual dies; the fraction of dies that meet the 'die' targets is at least pass_fraction
+Gates, in order (a failed gate stops the later ones):
+  build    design/chip.py build() returns a component with the spec's ports, heater terminals, size
+  drc      PDK DRC deck: 0 violations
+  lvs      PDK LVS: layout matches the netlist intent
+  nominal  calibrate() (if the spec has tuning) on the nominal die, then post-layout circuit simulation meets the 'nominal' targets
+  dies     calibrate() (if the spec has tuning) on blind virtual dies; the share of dies that meet the 'die' targets >= pass_fraction
 
-The script writes output/verify.json and output/verify.png. The exit code is 0 only if all gates that ran pass.
+Writes output/verify.json and output/verify.png. Exit code 0 only if every gate run passed.
 """
 
 import argparse
@@ -54,7 +54,10 @@ def score(spec, wl, resp, which):
     rows, values = [], {}
     for m in spec["metrics"]:
         t = resp["->".join(m["path"])]
-        v = METRICS[m["type"]](wl, t, **m.get("args", {}))
+        args = dict(m.get("args", {}))
+        if "other_path" in args:                     # a metric that compares two paths (for example imbalance)
+            args["other"] = resp["->".join(args.pop("other_path"))]
+        v = METRICS[m["type"]](wl, t, **args)
         values[m["name"]] = v
         for r in check(v, m.get(which, {})):
             rows.append({"metric": f"{m['name']}.{r['metric']}", **{k: r[k] for k in ("value", "target", "ok")}})
@@ -115,9 +118,10 @@ def main():
     ap.add_argument("--seeds", type=int, nargs="*", default=None, help="explicit die seeds instead of random ones")
     ap.add_argument("--design", default=None)
     ap.add_argument("--tuning", default=None)
+    ap.add_argument("--spec", default=None, help="spec file (default spec.md)")
     a = ap.parse_args()
     want = [g for g in GATES if g in a.gates.split(",")]
-    spec = load_spec()
+    spec = load_spec(a.spec)
     pdk = importlib.import_module(f"tools.pdks.{spec['pdk']}")
     os.makedirs(OUT, exist_ok=True)
     report = {"spec": spec["name"], "gates": {}, "time": time.strftime("%Y-%m-%d %H:%M:%S")}
@@ -145,7 +149,8 @@ def main():
                 want_terms = sorted(f"H{k}{s}" for k in range(1, n_h + 1) for s in "PN") if lay.get("heater_terminals") else []
                 bad_terms = sorted(set(want_terms) - set(terms))
                 too_big = any(s > m + 1e-6 for s, m in zip(size, lay["max_size"]))
-                ok = not missing and not bad_terms and not too_big and n_h > 0
+                no_tuners = bool(spec.get("tuning")) and n_h == 0      # the spec asks for tuning, the chip has none
+                ok = not missing and not bad_terms and not too_big and not no_tuners
                 if not gate(g, ok, size_um=size, max_size_um=lay["max_size"], missing_ports=missing, heaters=n_h,
                             missing_terminals=bad_terms, seconds=round(time.time() - t0, 1)):
                     break
@@ -159,12 +164,13 @@ def main():
                     print(r["report"][:2000])
                     break
             elif g == "nominal":
-                calibrate = load_tuning(a.tuning)
+                calibrate = load_tuning(a.tuning) if spec.get("tuning") else None
                 budget = spec["measurement"]["budget_per_die"]
                 d, wl, nominal_resp = run_die(chip, spec, "nominal", calibrate, budget)
-                total = sum(d["settings"].values())
-                lim = spec["heaters"]["nominal_total_dT_max"]
-                d["rows"].append({"metric": "heaters.total_dT", "value": total, "target": {"max": lim}, "ok": total <= lim})
+                lim = (spec.get("tuning") or {}).get("nominal_total_dT_max")
+                if lim is not None:
+                    total = sum(d["settings"].values())
+                    d["rows"].append({"metric": "tuning.total_dT", "value": total, "target": {"max": lim}, "ok": total <= lim})
                 ok = d["error"] is None and all(r["ok"] for r in d["rows"])
                 for r in d["rows"]:
                     v = r["value"]
@@ -175,7 +181,7 @@ def main():
                             seconds=round(time.time() - t0, 1), rows=d["rows"]):
                     break
             elif g == "dies":
-                calibrate = load_tuning(a.tuning)
+                calibrate = load_tuning(a.tuning) if spec.get("tuning") else None
                 budget = spec["measurement"]["budget_per_die"]
                 n = a.dies if a.dies is not None else int(spec["variation"]["dies"])
                 floor = int(spec["variation"]["training_dies"])

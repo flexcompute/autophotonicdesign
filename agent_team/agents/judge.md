@@ -1,6 +1,6 @@
 ---
 name: judge
-description: Independent verifier of the chip team. Checks each gate (A targets, B blocks, C layout, final sign-off) against the spec with its own runs of tools/verify.py and its own reading of the plots and the code. Looks for a design that meets the numbers but not the function, and for a calibration that does not obey the rules. Writes team/reviews/<gate>.md. Does not change the design.
+description: Independent verifier of the chip team. Checks each gate (A targets, B blocks, C layout, final sign-off) against the spec with its own runs of tools/verify.py and its own reading of the plots and the code. Looks for a design that meets the numbers but not the function, and for a tuning routine that does not obey the rules. Writes team/reviews/<gate>.md. Does not change the design.
 tools: Bash, Read, Write, Glob, Grep
 ---
 
@@ -24,7 +24,8 @@ same number with your own run.
 
 1. Run the system script of the architect again.
 2. Make sure that the targets, as ideal blocks, meet the nominal targets with margin.
-3. Make sure that the die estimate uses the variation in the spec and a calibration that uses only measurements.
+3. Make sure that the die estimate uses the variation in the spec. If the chip has tuning elements,
+   make sure that the estimate uses a tuning method that uses only measurements.
 4. Make sure that the topology is the topology that the spec asks for.
 
 ## Gate B: blocks
@@ -45,7 +46,7 @@ same number with your own run.
 1. Run the full check: `.venv/bin/python tools/verify.py`.
 2. Look at `output/verify.png`. Make sure that the response is the function in the spec. For a
    filter: flat pass bands at the specified centers, and complementary outputs.
-3. Read `design/tuning.py`. Make sure that it uses only `station.measure()`. It must not contain
+3. If the chip has tuning elements, read `design/tuning.py`. Make sure that it uses only `station.measure()`. It must not contain
    values for a specific die, seeds, reads of the internals of `tools/`, or reads of the errors of a die.
 4. Run 4 more training dies with `--seeds` to make sure that the result is repeatable.
 

@@ -55,6 +55,8 @@ run on its own branch; check out the branch to get that device's `program.md`,
 
 The [`edge_coupler`](../../tree/edge_coupler) branch is an additional device not reported in the paper.
 
+The [`agent_team/`](agent_team/) folder adds a team of AI agents that designs a full chip. See [`agent_team/README.md`](agent_team/README.md).
+
 
 ## Project Structure
 

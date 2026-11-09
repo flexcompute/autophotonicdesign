@@ -1,0 +1,313 @@
+{
+ "case": "siepic_mzi_loopback",
+ "pdk": "siepic_ebeam",
+ "seed": 7,
+ "top": "mzi_loopback",
+ "route_width": 0.5,
+ "plants": [
+  {
+   "source": "design",
+   "knob": "dl_a",
+   "value": 80.0,
+   "title": "MZI A long arm 20 um short: dL = 80 um, not 100 um",
+   "bbox": [
+    61.150000000000006,
+    -58.264,
+    178.85000000000002,
+    -41.05682307941717
+   ],
+   "severity": "high",
+   "loss_dB": null,
+   "why": "the free spectral range moves from 5.6 nm to 7.0 nm: the filter does not meet its function",
+   "id": "P01",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "design",
+   "knob": "dl_b",
+   "value": 60.4,
+   "title": "MZI B dL = 60.4 um, not 60 um",
+   "bbox": [
+    61.150000000000006,
+    215.537,
+    178.85000000000002,
+    222.94417692058286
+   ],
+   "severity": "none",
+   "loss_dB": null,
+   "why": "0.4 um is within the +-0.5 um tolerance of the intent sheet",
+   "id": "P02",
+   "drc": [],
+   "lvs": [],
+   "kind": "harmless"
+  },
+  {
+   "source": "design",
+   "knob": "gc_dy",
+   "value": {
+    "3": 2.0
+   },
+   "title": "grating coupler 3 is 2 um off its 127 um pitch",
+   "bbox": [
+    -33.543,
+    369.8862750534466,
+    266.25,
+    394.1137249465535
+   ],
+   "severity": "medium",
+   "loss_dB": 0.642455621301775,
+   "why": "",
+   "id": "P03",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "design",
+   "knob": "gc_dy",
+   "value": {
+    "5": 0.1
+   },
+   "title": "grating coupler 5 is 0.1 um off its 127 um pitch",
+   "bbox": [
+    -33.53585346430756,
+    623.8862750534465,
+    200.9449819892489,
+    646.2137249465536
+   ],
+   "severity": "none",
+   "loss_dB": 0.001606139053254438,
+   "why": "",
+   "id": "P04",
+   "drc": [],
+   "lvs": [],
+   "kind": "harmless"
+  },
+  {
+   "source": "design",
+   "knob": "bend_r",
+   "value": {
+    "route_b_out": 2.0
+   },
+   "title": "one MZI B output route bends at 2 um radius, not 5 um",
+   "bbox": [
+    259.13462495903525,
+    252.75336320399475,
+    266.25,
+    382.2400904928509
+   ],
+   "severity": "low",
+   "loss_dB": 0.0005669882228104749,
+   "why": "",
+   "id": "P05",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "design",
+   "knob": "crossing_rot",
+   "value": 90.0,
+   "title": "the crossing is turned by 90 degrees",
+   "bbox": [
+    118.05579953477755,
+    506.05579953477786,
+    121.94420046522248,
+    509.9442004652223
+   ],
+   "severity": "none",
+   "loss_dB": null,
+   "why": "the crossing is 4-fold symmetric: same geometry, only the pin names change",
+   "id": "P06",
+   "drc": [],
+   "lvs": [
+    "ebeam_crossing4#18.opt",
+    "ebeam_crossing4#18.opt2",
+    "ebeam_crossing4#18.opt3",
+    "ebeam_crossing4#18.opt4",
+    "ebeam_gc_te1550#4.opt1",
+    "ebeam_gc_te1550#5.opt1",
+    "ebeam_terminator_te1550#21.opt1",
+    "ebeam_terminator_te1550#23.opt1"
+   ],
+   "kind": "harmless"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "neck",
+    "route": "route_a_out",
+    "piece": 1,
+    "s0": -43.47554046263698,
+    "width": 0.25,
+    "length": 2.0
+   },
+   "title": "route route_a_out narrows to 250 nm for 2 um",
+   "bbox": [
+    264.15,
+    18.524,
+    265.85,
+    21.524
+   ],
+   "severity": "high",
+   "loss_dB": 1.7116175965468914,
+   "params": {
+    "width": 0.25,
+    "length": 2.0
+   },
+   "id": "P07",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "offset_tiny",
+    "route": "route_b_in",
+    "piece": 0,
+    "s0": -8.43131192511638
+   },
+   "title": "a 33 um straight of route route_b_in sits 5 nm off axis",
+   "bbox": [
+    -0.5,
+    253.25000000000003,
+    33.1,
+    254.75500000000002
+   ],
+   "severity": "none",
+   "loss_dB": 0.0038094811178286158,
+   "params": {
+    "offset": 0.005
+   },
+   "id": "P08",
+   "drc": [
+    "SiEPIC-1a",
+    "Si_space"
+   ],
+   "lvs": [],
+   "kind": "harmless"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "wrong_layer",
+    "route": "route_a_short",
+    "piece": 0,
+    "s0": -58.726480590278655,
+    "length": 5.0
+   },
+   "title": "5 um of route route_a_short drawn on Si Slab instead of Si",
+   "bbox": [
+    58.274,
+    2.0,
+    64.274,
+    3.5
+   ],
+   "severity": "high",
+   "loss_dB": 1.9321241934443245,
+   "params": {
+    "length": 5.0,
+    "layer": "Si Slab"
+   },
+   "id": "P09",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "gap",
+    "route": "route_b_short",
+    "piece": 0,
+    "s0": 17.39937197546739
+   },
+   "title": "0.5 um gap in route route_b_short",
+   "bbox": [
+    136.649,
+    255.89999999999998,
+    138.149,
+    257.6
+   ],
+   "severity": "high",
+   "loss_dB": null,
+   "params": {
+    "gap": 0.5
+   },
+   "id": "P10",
+   "drc": [],
+   "lvs": [
+    "ebeam_y_1550#12.opt2",
+    "ebeam_y_1550#13.opt3"
+   ],
+   "kind": "easy"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "width",
+    "route": "route_a_in",
+    "piece": 0,
+    "s0": 1.588320741520473
+   },
+   "title": "a 33 um straight of route route_a_in is 300 nm wide, no tapers",
+   "bbox": [
+    -0.5,
+    -0.75,
+    33.1,
+    0.75
+   ],
+   "severity": "medium",
+   "loss_dB": 0.10469391081286006,
+   "params": {
+    "width": 0.3,
+    "length": 32.6
+   },
+   "id": "P11",
+   "drc": [
+    "SiEPIC-1a"
+   ],
+   "lvs": [],
+   "kind": "easy"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "offset",
+    "route": "route_c_in",
+    "piece": 0,
+    "s0": -46.48238285817558
+   },
+   "title": "a 115 um straight of route route_c_in sits 150 nm off axis",
+   "bbox": [
+    -0.5,
+    507.25000000000006,
+    115.7,
+    508.90000000000003
+   ],
+   "severity": "high",
+   "loss_dB": 3.4037012665491853,
+   "params": {
+    "offset": 0.15
+   },
+   "id": "P12",
+   "drc": [
+    "SiEPIC-1a",
+    "Si_space"
+   ],
+   "lvs": [],
+   "kind": "easy"
+  }
+ ],
+ "baseline": {
+  "drc": {
+   "Si_space": 2,
+   "SiEPIC-1a": 6
+  },
+  "drc_source": "PDK deck siepic_ebeam_batch.drc",
+  "lvs_clean": false
+ }
+}

@@ -1,0 +1,295 @@
+{
+ "case": "siepic_mzi_loopback",
+ "pdk": "siepic_ebeam",
+ "seed": 7,
+ "n_findings": 20,
+ "n_reviews": 46,
+ "mistakes_found": 5,
+ "mistakes": 5,
+ "easy_found": 3,
+ "easy": 3,
+ "harmless_reported": 4,
+ "harmless_raised_as_defects": 0,
+ "harmless": 4,
+ "severity_exact": 7,
+ "severity_scored": 8,
+ "unmatched": 0,
+ "plants": [
+  {
+   "id": "P01",
+   "kind": "mistake",
+   "key_severity": "high",
+   "found": true,
+   "best_severity": "high",
+   "reviewers": [
+    "intent"
+   ],
+   "first_time": "2026-11-09T15:28:49.053678+00:00",
+   "first_by": "intent",
+   "confirmed_by": [
+    "microscope",
+    "physics",
+    "rules",
+    "twins"
+   ],
+   "n_findings": 1,
+   "title": "MZI A long arm 20 um short: dL = 80 um, not 100 um",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P02",
+   "kind": "harmless",
+   "key_severity": "none",
+   "found": true,
+   "best_severity": "none",
+   "reviewers": [
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:35:21.815768+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "rules"
+   ],
+   "n_findings": 1,
+   "title": "MZI B dL = 60.4 um, not 60 um",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P03",
+   "kind": "mistake",
+   "key_severity": "medium",
+   "found": true,
+   "best_severity": "medium",
+   "reviewers": [
+    "intent",
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:29:50.003326+00:00",
+   "first_by": "intent",
+   "confirmed_by": [
+    "physics",
+    "rules",
+    "twins"
+   ],
+   "n_findings": 2,
+   "title": "grating coupler 3 is 2 um off its 127 um pitch",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P04",
+   "kind": "harmless",
+   "key_severity": "none",
+   "found": true,
+   "best_severity": "none",
+   "reviewers": [
+    "intent",
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:29:50.004104+00:00",
+   "first_by": "intent",
+   "confirmed_by": [
+    "microscope",
+    "rules",
+    "twins"
+   ],
+   "n_findings": 2,
+   "title": "grating coupler 5 is 0.1 um off its 127 um pitch",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P05",
+   "kind": "mistake",
+   "key_severity": "low",
+   "found": true,
+   "best_severity": "medium",
+   "reviewers": [
+    "intent",
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:30:16.284038+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "physics",
+    "rules",
+    "twins"
+   ],
+   "n_findings": 2,
+   "title": "one MZI B output route bends at 2 um radius, not 5 um",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P06",
+   "kind": "harmless",
+   "key_severity": "none",
+   "found": true,
+   "best_severity": "none",
+   "reviewers": [
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:30:16.287628+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "physics",
+    "rules"
+   ],
+   "n_findings": 1,
+   "title": "the crossing is turned by 90 degrees",
+   "drc": [],
+   "lvs": true
+  },
+  {
+   "id": "P07",
+   "kind": "mistake",
+   "key_severity": "high",
+   "found": true,
+   "best_severity": "high",
+   "reviewers": [
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:29:45.486496+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "physics",
+    "rules"
+   ],
+   "n_findings": 1,
+   "title": "route route_a_out narrows to 250 nm for 2 um",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P08",
+   "kind": "harmless",
+   "key_severity": "none",
+   "found": true,
+   "best_severity": "none",
+   "reviewers": [
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:30:16.287573+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "rules"
+   ],
+   "n_findings": 2,
+   "title": "a 33 um straight of route route_b_in sits 5 nm off axis",
+   "drc": [
+    "SiEPIC-1a",
+    "Si_space"
+   ],
+   "lvs": false
+  },
+  {
+   "id": "P09",
+   "kind": "mistake",
+   "key_severity": "high",
+   "found": true,
+   "best_severity": "high",
+   "reviewers": [
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:28:30.750753+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "physics",
+    "rules"
+   ],
+   "n_findings": 1,
+   "title": "5 um of route route_a_short drawn on Si Slab instead of Si",
+   "drc": [],
+   "lvs": false
+  },
+  {
+   "id": "P10",
+   "kind": "easy",
+   "key_severity": "high",
+   "found": true,
+   "best_severity": "high",
+   "reviewers": [
+    "microscope",
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:28:30.751251+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "physics",
+    "rules",
+    "twins"
+   ],
+   "n_findings": 2,
+   "title": "0.5 um gap in route route_b_short",
+   "drc": [],
+   "lvs": true
+  },
+  {
+   "id": "P11",
+   "kind": "easy",
+   "key_severity": "medium",
+   "found": true,
+   "best_severity": "medium",
+   "reviewers": [
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:29:45.486363+00:00",
+   "first_by": "twins",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "physics",
+    "rules"
+   ],
+   "n_findings": 2,
+   "title": "a 33 um straight of route route_a_in is 300 nm wide, no tapers",
+   "drc": [
+    "SiEPIC-1a"
+   ],
+   "lvs": false
+  },
+  {
+   "id": "P12",
+   "kind": "easy",
+   "key_severity": "high",
+   "found": true,
+   "best_severity": "high",
+   "reviewers": [
+    "intent",
+    "twins"
+   ],
+   "first_time": "2026-11-09T15:29:26.326948+00:00",
+   "first_by": "intent",
+   "confirmed_by": [
+    "intent",
+    "microscope",
+    "physics",
+    "rules",
+    "twins"
+   ],
+   "n_findings": 3,
+   "title": "a 115 um straight of route route_c_in sits 150 nm off axis",
+   "drc": [
+    "SiEPIC-1a",
+    "Si_space"
+   ],
+   "lvs": false
+  }
+ ],
+ "chipwide": [],
+ "unmatched_findings": []
+}

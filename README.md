@@ -55,6 +55,8 @@ run on its own branch; check out the branch to get that device's `program.md`,
 
 The [`edge_coupler`](../../tree/edge_coupler) branch is an additional device not reported in the paper.
 
+The [`needle_in_a_haystack/`](needle_in_a_haystack/) folder (this branch) adds a test of AI review before tapeout: a team of five AI reviewers looks for planted mistakes that DRC and LVS do not catch, on any PDK with a small adapter file. See [`needle_in_a_haystack/README.md`](needle_in_a_haystack/README.md).
+
 
 ## Project Structure
 

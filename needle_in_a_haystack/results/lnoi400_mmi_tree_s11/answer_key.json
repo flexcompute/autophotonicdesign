@@ -1,0 +1,409 @@
+{
+ "case": "lnoi400_mmi_tree",
+ "pdk": "lnoi400",
+ "seed": 11,
+ "top": "mmi_tree",
+ "route_width": 1.0,
+ "plants": [
+  {
+   "source": "design",
+   "knob": "bend_r",
+   "value": {
+    "route_out_1": 100.0
+   },
+   "title": "output route 1 bends at 100 um radius: legal, but its path is then shorter than the other seven",
+   "bbox": [
+    1777.4698950654704,
+    311.5,
+    1922.1730949085184,
+    382.3657768715657
+   ],
+   "severity": "medium",
+   "loss_dB": null,
+   "why": "the intent asks for eight equal paths (+-0.5 um); the larger radius cuts the corners",
+   "build_info": {
+    "route_lengths": {
+     "route_in": 140.0,
+     "route_l1_0": 706.957009,
+     "route_l1_1": 706.9524765,
+     "route_l2_0": 583.532516,
+     "route_l2_1": 583.5324805,
+     "route_l2_2": 583.532516,
+     "route_l2_3": 583.5324805,
+     "route_out_0": 582.613537,
+     "route_out_1": 580.3307755,
+     "route_out_2": 582.613537,
+     "route_out_3": 582.613537,
+     "route_out_4": 582.613537,
+     "route_out_5": 582.613537,
+     "route_out_6": 582.613537,
+     "route_out_7": 582.613537
+    },
+    "path_lengths": {
+     "0": 2013.103062,
+     "1": 2010.8203005,
+     "2": 2013.1030265,
+     "3": 2013.1030265,
+     "4": 2013.0985294999998,
+     "5": 2013.0985294999998,
+     "6": 2013.098494,
+     "7": 2013.098494
+    }
+   },
+   "id": "P01",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "design",
+   "knob": "bend_r",
+   "value": {
+    "route_out_6": 25.0
+   },
+   "title": "output route 6 bends at 25 um radius, not 80 um",
+   "bbox": [
+    1775.9612174465535,
+    -381.9999598998599,
+    1903.9303102088434,
+    -311.5
+   ],
+   "severity": "medium",
+   "loss_dB": 0.30132740301839583,
+   "why": "",
+   "build_info": {
+    "route_lengths": {
+     "route_in": 140.0,
+     "route_l1_0": 706.957009,
+     "route_l1_1": 706.9524765,
+     "route_l2_0": 583.532516,
+     "route_l2_1": 583.5324805,
+     "route_l2_2": 583.532516,
+     "route_l2_3": 583.5324805,
+     "route_out_0": 582.613537,
+     "route_out_1": 582.613537,
+     "route_out_2": 582.613537,
+     "route_out_3": 582.613537,
+     "route_out_4": 582.613537,
+     "route_out_5": 582.613537,
+     "route_out_6": 603.705799,
+     "route_out_7": 582.613537
+    },
+    "path_lengths": {
+     "0": 2013.103062,
+     "1": 2013.103062,
+     "2": 2013.1030265,
+     "3": 2013.1030265,
+     "4": 2013.0985294999998,
+     "5": 2013.0985294999998,
+     "6": 2034.190756,
+     "7": 2013.098494
+    }
+   },
+   "id": "P02",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "design",
+   "knob": "ec_dy",
+   "value": {
+    "5": 3.0
+   },
+   "title": "output edge coupler 5 is 3 um off its 127 um pitch",
+   "bbox": [
+    1779.5787160114562,
+    -201.50000000000003,
+    2701.0,
+    -129.09977195322583
+   ],
+   "severity": "high",
+   "loss_dB": 17.372,
+   "why": "",
+   "build_info": {
+    "route_lengths": {
+     "route_in": 140.0,
+     "route_l1_0": 706.957009,
+     "route_l1_1": 706.9524765,
+     "route_l2_0": 583.532516,
+     "route_l2_1": 583.5324805,
+     "route_l2_2": 583.532516,
+     "route_l2_3": 583.5324805,
+     "route_out_0": 582.613537,
+     "route_out_1": 582.613537,
+     "route_out_2": 582.613537,
+     "route_out_3": 582.613537,
+     "route_out_4": 582.613537,
+     "route_out_5": 581.129634,
+     "route_out_6": 582.613537,
+     "route_out_7": 582.613537
+    },
+    "path_lengths": {
+     "0": 2013.103062,
+     "1": 2013.103062,
+     "2": 2013.1030265,
+     "3": 2013.1030265,
+     "4": 2013.0985294999998,
+     "5": 2011.6146264999998,
+     "6": 2013.098494,
+     "7": 2013.098494
+    }
+   },
+   "id": "P03",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "design",
+   "knob": "mmi_dx",
+   "value": {
+    "4": 0.3
+   },
+   "title": "MMI 4 sits 0.3 um further right; its three routes follow",
+   "bbox": [
+    1699.1990050123743,
+    57.50000000000001,
+    1904.234176114499,
+    196.49636408807615
+   ],
+   "severity": "none",
+   "loss_dB": null,
+   "why": "its input route is 0.3 um longer and both output routes 0.3 um shorter: every path keeps its length",
+   "build_info": {
+    "route_lengths": {
+     "route_in": 140.0,
+     "route_l1_0": 706.957009,
+     "route_l1_1": 706.9524765,
+     "route_l2_0": 583.532516,
+     "route_l2_1": 583.8324805,
+     "route_l2_2": 583.532516,
+     "route_l2_3": 583.5324805,
+     "route_out_0": 582.613537,
+     "route_out_1": 582.613537,
+     "route_out_2": 582.313537,
+     "route_out_3": 582.313537,
+     "route_out_4": 582.613537,
+     "route_out_5": 582.613537,
+     "route_out_6": 582.613537,
+     "route_out_7": 582.613537
+    },
+    "path_lengths": {
+     "0": 2013.103062,
+     "1": 2013.103062,
+     "2": 2013.1030265,
+     "3": 2013.1030265,
+     "4": 2013.0985294999998,
+     "5": 2013.0985294999998,
+     "6": 2013.098494,
+     "7": 2013.098494
+    }
+   },
+   "id": "P04",
+   "drc": [],
+   "lvs": [],
+   "kind": "harmless"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "offset",
+    "route": "route_l1_1",
+    "piece": 0,
+    "s0": -28.781761364002705
+   },
+   "title": "a 92 um straight of route route_l1_1 sits 300 nm off axis",
+   "bbox": [
+    655.75,
+    -174.50000000000003,
+    658.05,
+    -81.15
+   ],
+   "severity": "high",
+   "loss_dB": 1.8063512100516266,
+   "params": {
+    "offset": 0.3
+   },
+   "id": "P05",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "offset_tiny",
+    "route": "route_out_0",
+    "piece": 0,
+    "s0": 40.55011240314795
+   },
+   "title": "a 437 um straight of route route_out_0 sits 10 nm off axis",
+   "bbox": [
+    1902.6090000000002,
+    443.50000000000006,
+    2340.5,
+    445.51000000000005
+   ],
+   "severity": "none",
+   "loss_dB": 0.001987842825674839,
+   "params": {
+    "offset": 0.01
+   },
+   "id": "P06",
+   "drc": [],
+   "lvs": [],
+   "kind": "harmless"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "gap",
+    "route": "route_in",
+    "piece": 0,
+    "s0": 59.488995984072545
+   },
+   "title": "0.5 um gap in route route_in",
+   "bbox": [
+    488.739,
+    -1.1,
+    490.239,
+    1.1
+   ],
+   "severity": "high",
+   "loss_dB": null,
+   "params": {
+    "gap": 0.5
+   },
+   "id": "P07",
+   "drc": [
+    "LN_RIDGE.space<1.0"
+   ],
+   "lvs": [
+    "edge_coupler__D4E7NKX2GQ3U2736LLE4YDC3XWAYHPRUI55W2MOYTHNRCAOLWJFA#0.P0",
+    "mmi1x2_optimized1550__KJGVO56XWPOAF2CIIV6N7IRP2YJWR5LBDIITS73WNH55ACXVUNMQ#1.P0"
+   ],
+   "kind": "easy"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "neck",
+    "route": "route_l1_0",
+    "piece": 0,
+    "s0": 9.893371079529146,
+    "width": 0.4,
+    "length": 2.0
+   },
+   "title": "route route_l1_0 narrows to 400 nm for 2 um",
+   "bbox": [
+    655.65,
+    136.218,
+    657.85,
+    139.218
+   ],
+   "severity": "medium",
+   "loss_dB": 0.3346443292113838,
+   "params": {
+    "width": 0.4,
+    "length": 2.0
+   },
+   "id": "P08",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "width",
+    "route": "route_l2_3",
+    "piece": 0,
+    "s0": -109.99031712664647
+   },
+   "title": "a 367 um straight of route route_l2_3 is 600 nm wide, no tapers",
+   "bbox": [
+    1332.4540000000002,
+    -382.00000000000006,
+    1700.5000000000002,
+    -380.00000000000006
+   ],
+   "severity": "low",
+   "loss_dB": 0.059601868131916945,
+   "params": {
+    "width": 0.6,
+    "length": 367.04600000000005
+   },
+   "id": "P09",
+   "drc": [],
+   "lvs": [],
+   "kind": "mistake"
+  },
+  {
+   "source": "geometry",
+   "action": {
+    "op": "wrong_layer",
+    "route": "route_l2_2",
+    "piece": 0,
+    "s0": 35.36900259016977,
+    "length": 10.0
+   },
+   "title": "10 um of route route_l2_2 drawn on LN_SLAB instead of LN_RIDGE",
+   "bbox": [
+    1546.346,
+    -128.0,
+    1557.346,
+    -126.0
+   ],
+   "severity": "high",
+   "loss_dB": 9.322530367796686,
+   "params": {
+    "length": 10.0,
+    "layer": "LN_SLAB"
+   },
+   "id": "P10",
+   "drc": [],
+   "lvs": [
+    "mmi1x2_optimized1550__KJGVO56XWPOAF2CIIV6N7IRP2YJWR5LBDIITS73WNH55ACXVUNMQ#3.P2",
+    "mmi1x2_optimized1550__KJGVO56XWPOAF2CIIV6N7IRP2YJWR5LBDIITS73WNH55ACXVUNMQ#6.P0"
+   ],
+   "kind": "easy"
+  }
+ ],
+ "build_info_clean": {
+  "route_lengths": {
+   "route_in": 140.0,
+   "route_l1_0": 706.957009,
+   "route_l1_1": 706.9524765,
+   "route_l2_0": 583.532516,
+   "route_l2_1": 583.5324805,
+   "route_l2_2": 583.532516,
+   "route_l2_3": 583.5324805,
+   "route_out_0": 582.613537,
+   "route_out_1": 582.613537,
+   "route_out_2": 582.613537,
+   "route_out_3": 582.613537,
+   "route_out_4": 582.613537,
+   "route_out_5": 582.613537,
+   "route_out_6": 582.613537,
+   "route_out_7": 582.613537
+  },
+  "path_lengths": {
+   "0": 2013.103062,
+   "1": 2013.103062,
+   "2": 2013.1030265,
+   "3": 2013.1030265,
+   "4": 2013.0985294999998,
+   "5": 2013.0985294999998,
+   "6": 2013.098494,
+   "7": 2013.098494
+  }
+ },
+ "baseline": {
+  "drc": {
+   "LN_RIDGE.space<1.0": 1
+  },
+  "drc_source": "basic width/space check",
+  "lvs_clean": false
+ }
+}

@@ -1,0 +1,67 @@
+{
+ "agents": {
+  "rules": {
+   "tool_calls": 38,
+   "tools": {
+    "Bash": 33,
+    "Read": 4,
+    "Write": 1
+   },
+   "outside_paths": [],
+   "api_responses": 38
+  },
+  "twins": {
+   "tool_calls": 34,
+   "tools": {
+    "Bash": 32,
+    "Read": 1,
+    "Write": 1
+   },
+   "outside_paths": [],
+   "api_responses": 33
+  },
+  "microscope": {
+   "tool_calls": 51,
+   "tools": {
+    "Bash": 44,
+    "Read": 6,
+    "Write": 1
+   },
+   "outside_paths": [],
+   "api_responses": 47
+  },
+  "intent": {
+   "tool_calls": 46,
+   "tools": {
+    "Bash": 44,
+    "Read": 1,
+    "Write": 1
+   },
+   "outside_paths": [],
+   "api_responses": 46
+  },
+  "physics": {
+   "tool_calls": 32,
+   "tools": {
+    "Bash": 28,
+    "Read": 1,
+    "Write": 3
+   },
+   "outside_paths": [],
+   "api_responses": 32
+  }
+ },
+ "tool_calls": 201,
+ "hits": [],
+ "usage": {
+  "input_tokens": 392,
+  "cache_creation_input_tokens": 1729481,
+  "cache_read_input_tokens": 41938303,
+  "output_tokens": 297309
+ },
+ "models": [
+  "claude-opus-5-5"
+ ],
+ "cost_usd": 22.98,
+ "violations": 0
+}

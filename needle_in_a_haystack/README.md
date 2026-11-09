@@ -68,7 +68,7 @@ flowchart LR
         direction TB
         L1["<b>layout</b><br/>summary, instances, find,<br/>query, cross_section,<br/>fingerprint, render"]
         L2["<b>checks</b><br/>drc, basic_drc,<br/>extraction, lvs,<br/>optical_net_geometry"]
-        L3["<b>physics</b><br/>modes, junction_loss,<br/>bend_loss<br/>(local mode solver)"]
+        L3["<b>physics</b><br/>modes, junction_loss,<br/>bend_loss, overlap<br/>(local mode solver)"]
         L4["<b>board</b><br/>post, board"]
     end
     subgraph D["tools/pdks/&lt;pdk&gt;.py: about 40 lines per PDK"]
@@ -103,6 +103,58 @@ With no pin layer, `review.py` finds the pins with `Component.detect_ports` on t
 deck, it runs a width and space check with the numbers in the adapter. With a deck, `photonforge.drc_check` runs it.
 The mode solver builds the cross-section from the PDK port spec, so a width change, an offset, a bend or a piece on
 another layer is solved the same way for every PDK.
+
+## What each tool does, in plain words
+
+The tools do not decide anything. They look and they measure. The AI reviewer decides what to look at, reads the
+numbers, and judges if a difference is a defect. The table puts the tools in the order of the questions that a person
+asks during a manual review.
+
+| The question | Tool | What it does |
+|---|---|---|
+| What is on this chip? | `summary` | Gives a first look: the chip size, the layers, the kinds of cells, and if the PDK has a DRC deck. |
+| | `instances`, `find` | Makes a parts list: each placed cell, where it is, which way it faces, and if it is a device or a route. |
+| | `cell_shapes` | Shows the drawing of one cell, so that the reviewer can compare it with the PDK's own cell. |
+| | `flat`, `query` | Gives every shape on every layer, or only the shapes in a small box. |
+| What does it look like? | `render` | Draws a picture of any area at any zoom, with marks. This is the eyepiece of the microscope. |
+| How wide is it, exactly? | `cross_section` | Cuts across a waveguide like a ruler. It gives the width and the layer at that point. A walk of many cuts along a route finds a neck or a width change. |
+| | `route_width`, `centerline_length` | Give the width that a route must have, and the length of a route piece. |
+| Is it the same as its twins? | `fingerprint` | Gives a short code for a shape. Two shapes that are the same give the same code, in any place. One different code in a group of twins shows the odd one out. |
+| Does it pass the standard checks? | `drc` | Runs the foundry's rule deck when the PDK has one. |
+| | `basic_drc` | Checks the minimum width and space when there is no deck. |
+| Is it connected as the schematic says? | `extraction` | Follows each waveguide from device pin to device pin, and lists which pins each one joins. |
+| | `lvs` | Compares those connections with the intended netlist: a break, a short or a swap shows here. |
+| | `optical_net_geometry`, `pin_xy` | Give each connection's route (its length, its layers, its place) and the position of each pin. Path lengths come from here. |
+| How much light does it cost? | `modes` | Solves the shape of the light in the waveguide cross-section of this PDK, also in a bend. |
+| | `junction_loss` | Calculates how much light gets through where two waveguides meet: with a side offset, a width step, or a piece on another layer. |
+| | `bend_loss` | Calculates the loss of one bend: the light that leaks out of the curve, and the mismatch where the bend meets a straight. |
+| | `mode_fields`, `overlap` | Give the solved light shapes, for the reviewer's own calculations. |
+| What did the others find? | `post`, `board` | Pin a finding to the shared board, and read the findings of the other reviewers to confirm or dispute them. |
+
+All the physics runs on this computer, in seconds, with the PDK's own cross-section. It does not use cloud
+simulations.
+
+How often each reviewer used each tool in the two runs (the number of the reviewer's commands that used the tool):
+
+| Tool | rules | twins | microscope | intent | physics |
+|---|---|---|---|---|---|
+| `cell_shapes` | 9 | 19 | 3 | 23 | 2 |
+| `instances` | 9 | 9 | 6 | 16 | 3 |
+| `flat` | 11 | 5 | 16 | 8 | 3 |
+| `cross_section` | 7 | 6 | 3 | 7 | 1 |
+| `fingerprint` | 3 | 4 | 2 | 2 | 1 |
+| `render` | 2 | 2 | 2 | 3 | 0 |
+| `drc` | 7 | 6 | 3 | 5 | 0 |
+| `extraction` | 6 | 4 | 9 | 5 | 2 |
+| `lvs` | 6 | 5 | 4 | 6 | 1 |
+| `optical_net_geometry` | 2 | 1 | 3 | 5 | 1 |
+| `modes` | 4 | 6 | 5 | 4 | 4 |
+| `junction_loss` | 9 | 7 | 7 | 7 | 5 |
+| `board` | 6 | 12 | 11 | 12 | 10 |
+
+The reviewers also wrote their own scripts on top of the tools. In about 30 commands they called the inner functions
+of the mode solver, to calculate the loss at bend joints, across gaps and in mode beating. `bend_loss`,
+`mode_fields` and `overlap` came from those runs: they make the most common of those calculations one call.
 
 ## The plants
 

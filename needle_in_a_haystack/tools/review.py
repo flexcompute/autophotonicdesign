@@ -10,7 +10,7 @@ folder; delete it to rebuild.
 Groups of calls:
     layout   summary, instances, find, cell_shapes, flat, query, cross_section, centerline_length, fingerprint, render
     checks   drc, basic_drc, extraction, lvs, pin_xy, optical_net_geometry
-    physics  modes, junction_loss, bend_loss (local Tidy3D mode solver on the PDK's route cross-section, no cloud)
+    physics  modes, junction_loss, bend_loss, mode_fields, overlap (local Tidy3D mode solver, no cloud)
     board    post, board
 """
 import functools
@@ -833,6 +833,28 @@ def junction_loss(width1=None, width2=None, offset=0.0, spec1=None, spec2=None, 
         return dict(transmission=0.0, loss_dB=float("inf"), note=f"no guided TE mode at core width {w} um")
     t = _overlap(sols[0], m1, sols[1], m2, offset)
     return dict(transmission=t, loss_dB=float(-10 * np.log10(max(t, 1e-12))))
+
+
+def mode_fields(width=None, bend_radius=None, layer=None, num_modes=3, spec=None, wavelength=None):
+    """The solved modes of the route cross-section (another core width, a bend or another layer if asked), for your own
+    overlap calculations. Returns dict(solved, te_mode, n_eff): `solved.data` is the Tidy3D mode data and `te_mode` the
+    index of the fundamental TE mode (in a bend: the TE mode with the most power in the core). Give two of them to
+    overlap()."""
+    n = max(num_modes, 4) if bend_radius else num_modes
+    sol = _solve(_spec(spec, width, layer), n, bend_radius, wavelength)
+    if bend_radius:
+        core = _core_fraction(sol, (width or route_width()) / 2 + 0.3)
+        te = sol.data.pol_fraction.te.isel(f=0).values
+        m = max(range(n), key=lambda i: (te[i] > 0.5, core[i]))
+    else:
+        m = _te_mode(sol)
+    return dict(solved=sol, te_mode=m, n_eff=[float(v) for v in sol.data.n_eff.isel(f=0).values])
+
+
+def overlap(a, b, offset=0.0):
+    """Fraction of the power in the TE mode of `a` that couples into the TE mode of `b`, with `b` moved sideways by
+    `offset` um (a and b from mode_fields())."""
+    return _overlap(a["solved"], a["te_mode"], b["solved"], b["te_mode"], offset)
 
 
 def bend_loss(radius, angle_deg=90.0, width=None, spec=None, wavelength=None):

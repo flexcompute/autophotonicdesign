@@ -96,6 +96,7 @@ First calls build a cache (a few seconds); later calls are fast.
 | `rv.modes(width, bend_radius, num_modes)` | local Tidy3D mode solve of this PDK's route cross-section (no cloud, about 5 to 20 s) |
 | `rv.junction_loss(width1, width2, offset, layer2)` | loss where two cross-sections meet end to end (mode overlap), with a side offset |
 | `rv.bend_loss(radius, angle_deg)` | loss of one bend: radiation along the arc and the mode mismatch at its two ends |
+| `rv.mode_fields(width, bend_radius, layer)`, `rv.overlap(a, b, offset)` | the solved modes for your own overlap calculations, and the overlap of two of them |
 | `rv.post(...)`, `rv.board()` | post a finding to the shared board, read the board |
 
 You can write any further analysis yourself (shapely, numpy, PhotonForge, Tidy3D local mode solver). Keep your scripts in
